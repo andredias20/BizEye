@@ -27,8 +27,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const playerRef = useRef<any>(null);
 
     // Stable URL that only depends on streamId to prevent iframe reloads
+    // Note: mute=1 is required for autoplay to work consistently in modern browsers
     const embedUrl = React.useMemo(() =>
-        `https://www.youtube.com/embed/live_stream?channel=${streamId}&enablejsapi=1&autoplay=1&controls=0&rel=0&modestbranding=1`,
+        `https://www.youtube.com/embed/live_stream?channel=${streamId}&enablejsapi=1&autoplay=1&mute=1&controls=0&rel=0&modestbranding=1`,
         [streamId]);
 
     useEffect(() => {
@@ -62,6 +63,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 onReady: (event: any) => {
                     // Sync initial state
                     event.target.setVolume(volume);
+
+                    // Force play in case autoplay was blocked
+                    event.target.playVideo();
+
                     if (isMuted) event.target.mute();
                     else event.target.unMute();
 

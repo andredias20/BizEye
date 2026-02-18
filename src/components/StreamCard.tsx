@@ -40,10 +40,6 @@ const StreamCard: React.FC<StreamCardProps> = ({ streamId, onRemove }) => {
                     <div className="live-indicator">LIVE</div>
                     <span className="channel-id">{channelName || `@${streamId}`}</span>
                 </div>
-                <div className="qr-code">
-                    {/* Placeholder for QR Code */}
-                    <div className="qr-box" />
-                </div>
             </div>
 
             {/* Click Overlay to Mute/Unmute */}
@@ -89,7 +85,7 @@ const StreamCard: React.FC<StreamCardProps> = ({ streamId, onRemove }) => {
                     <span className="volume-percentage">{isMuted ? 0 : volume}%</span>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 
