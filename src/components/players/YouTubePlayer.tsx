@@ -32,7 +32,9 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
     const embedUrl = React.useMemo(() => {
         const origin = window.location.origin;
-        return `https://www.youtube.com/embed/live_stream?channel=${streamId}&enablejsapi=1&autoplay=1&mute=1&controls=0&rel=0&modestbranding=1&origin=${origin}&vq=hd1080`;
+        const isChannel = streamId.startsWith('UC');
+        const path = isChannel ? `live_stream?channel=${streamId}` : `${streamId}?`;
+        return `https://www.youtube.com/embed/${path}&enablejsapi=1&autoplay=1&mute=1&controls=0&rel=0&modestbranding=1&origin=${origin}&vq=hd1080`;
     }, [streamId]);
 
     useEffect(() => {

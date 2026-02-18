@@ -22,53 +22,71 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
     const resolveYoutubeId = async (input: string) => {
         const cleanInput = input.trim();
 
-        // 1. Direct UC ID check
-        if (cleanInput.startsWith('UC') && cleanInput.length === 24) return cleanInput;
-
-        // 2. Parse URL or Handle
-        let handle = cleanInput;
-        if (cleanInput.includes('youtube.com/')) {
+        // 1. Try to extract Video ID from watch?v= or youtu.be/
+        if (cleanInput.includes('youtube.com/watch') || cleanInput.includes('youtu.be/')) {
             try {
                 const url = new URL(cleanInput.includes('http') ? cleanInput : `https://${cleanInput}`);
-                const pathParts = url.pathname.split('/').filter(p => p);
-
-                const channelIdx = pathParts.indexOf('channel');
-                if (channelIdx !== -1 && pathParts[channelIdx + 1]?.startsWith('UC')) {
-                    return pathParts[channelIdx + 1];
+                if (url.hostname.includes('youtu.be')) {
+                    return url.pathname.slice(1);
                 }
-
-                const lastPart = pathParts[pathParts.length - 1];
-                handle = lastPart.startsWith('@') ? lastPart : `@${lastPart}`;
+                const videoId = url.searchParams.get('v');
+                if (videoId) return videoId;
             } catch (e) {
-                const lastPart = cleanInput.split('/').pop() || '';
-                handle = lastPart.startsWith('@') ? lastPart : `@${lastPart}`;
+                // fall through
             }
-        } else if (!handle.startsWith('@')) {
-            handle = `@${handle}`;
         }
+
+        // 2. Try to find a UC ID directly (regex)
+        const ucMatch = cleanInput.match(/UC[a-zA-Z0-9_-]{22}/);
+        if (ucMatch) return ucMatch[0];
+
+        // 3. Try to find a handle (@...) or name
+        let handle = '';
+        const handleMatch = cleanInput.match(/@([a-zA-Z0-9._-]+)/);
+        if (handleMatch) {
+            handle = `@${handleMatch[1]}`;
+        } else if (cleanInput.includes('youtube.com/')) {
+            try {
+                const url = new URL(cleanInput.includes('http') ? cleanInput : `https://${cleanInput}`);
+                const pathParts = url.pathname.split('/').filter(p => !['c', 'user', 'channel'].includes(p) && p !== '');
+                handle = pathParts[0] || '';
+                if (!handle.startsWith('@') && handle) handle = `@${handle}`;
+            } catch (e) {
+                const parts = cleanInput.split('/').filter(p => p);
+                handle = parts[parts.length - 1] || '';
+            }
+        } else {
+            handle = cleanInput.startsWith('@') ? cleanInput : `@${cleanInput}`;
+        }
+
+        if (!handle) throw new Error('Could not identify a YouTube handle or ID in the input.');
 
         // 3. API Resolution
         if (!YOUTUBE_API_KEY) {
-            throw new Error('CONFIG ERROR: YouTube API Key missing. Please check your .env file or add the channel ID (UC...) directly.');
+            throw new Error('YT CONFIG ERROR: YouTube API Key missing. Enter UC ID directly or fix .env.');
         }
 
         try {
             console.log(`Resolving YouTube handle: ${handle}`);
-            const response = await fetch(
+
+            // Step A: Try direct channel lookup by handle
+            const hRes = await fetch(
                 `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${handle}&key=${YOUTUBE_API_KEY}`
             );
+            const hData = await hRes.json();
+            if (hData.items?.[0]?.id) return hData.items[0].id;
 
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(`API Error: ${errData.error?.message || response.statusText}`);
+            // Step B: Fallback to Search (more robust for custom URLs/names)
+            const sRes = await fetch(
+                `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(handle)}&maxResults=1&key=${YOUTUBE_API_KEY}`
+            );
+            const sData = await sRes.json();
+
+            if (sData.items?.[0]?.snippet?.channelId) {
+                return sData.items[0].snippet.channelId;
             }
 
-            const data = await response.json();
-            if (data.items && data.items.length > 0) {
-                return data.items[0].id;
-            }
-
-            throw new Error(`Channel not found for handle: ${handle}. Make sure it is the correct handle.`);
+            throw new Error(`Channel not found for: ${handle}. Try using the full Channel URL.`);
         } catch (err: any) {
             console.error('YouTube resolution failed:', err);
             throw err;
@@ -88,8 +106,14 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
                 id = await resolveYoutubeId(id);
             } else {
                 // Twitch/Kick handle extraction
-                if (id.includes('.com/')) {
-                    id = id.split('/').pop() || id;
+                if (id.includes('.com/') || id.includes('.tv/')) {
+                    try {
+                        const url = new URL(id.includes('http') ? id : `https://${id}`);
+                        const pathParts = url.pathname.split('/').filter(p => p);
+                        id = pathParts[0] || id;
+                    } catch (e) {
+                        id = id.split('/').pop() || id;
+                    }
                 }
             }
 
