@@ -6,6 +6,7 @@ interface VideoPlayerProps {
     isMuted: boolean;
     volume: number;
     onSignalError: () => void;
+    onMetadata?: (data: { author: string; title: string }) => void;
 }
 
 declare global {
@@ -19,10 +20,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     streamId,
     isMuted,
     volume,
-    onSignalError
+    onSignalError,
+    onMetadata
 }) => {
-    const containerRef = useRef<HTMLDivElement>(null);
+    const iframeRef = useRef<HTMLIFrameElement>(null);
     const playerRef = useRef<any>(null);
+
+    // Stable URL that only depends on streamId to prevent iframe reloads
+    const embedUrl = React.useMemo(() =>
+        `https://www.youtube.com/embed/live_stream?channel=${streamId}&enablejsapi=1&autoplay=1&controls=0&rel=0&modestbranding=1`,
+        [streamId]);
 
     useEffect(() => {
         // Load YouTube API if not already loaded
@@ -47,26 +54,33 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }, [streamId]);
 
     const initPlayer = () => {
-        if (!containerRef.current || !window.YT) return;
+        if (!iframeRef.current || !window.YT) return;
 
-        playerRef.current = new window.YT.Player(containerRef.current, {
-            height: '100%',
-            width: '100%',
-            videoId: '', // Will be overridden by live_stream param for channel
-            playerVars: {
-                listType: 'live_stream',
-                list: streamId,
-                autoplay: 1,
-                mute: isMuted ? 1 : 0,
-                controls: 0,
-                rel: 0,
-                modestbranding: 1
-            },
+        // Initialize player on existing iframe
+        playerRef.current = new window.YT.Player(iframeRef.current, {
             events: {
                 onReady: (event: any) => {
+                    // Sync initial state
                     event.target.setVolume(volume);
                     if (isMuted) event.target.mute();
                     else event.target.unMute();
+
+                    // Extract metadata if available
+                    if (onMetadata && event.target.getVideoData) {
+                        const data = event.target.getVideoData();
+                        if (data && data.author) {
+                            onMetadata({ author: data.author, title: data.title });
+                        }
+                    }
+                },
+                onStateChange: (event: any) => {
+                    // Sometimes data isn't ready until playback starts or state changes
+                    if (onMetadata && event.data === window.YT.PlayerState.PLAYING) {
+                        const data = event.target.getVideoData();
+                        if (data && data.author) {
+                            onMetadata({ author: data.author, title: data.title });
+                        }
+                    }
                 },
                 onError: () => {
                     onSignalError();
@@ -76,16 +90,32 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
 
     useEffect(() => {
-        if (playerRef.current && playerRef.current.setVolume) {
-            playerRef.current.setVolume(volume);
-            if (isMuted) playerRef.current.mute();
-            else playerRef.current.unMute();
+        if (playerRef.current && typeof playerRef.current.setVolume === 'function') {
+            try {
+                playerRef.current.setVolume(volume);
+                if (isMuted) {
+                    playerRef.current.mute();
+                } else {
+                    playerRef.current.unMute();
+                }
+            } catch (e) {
+                console.error("Error setting volume/mute:", e);
+            }
         }
     }, [isMuted, volume]);
 
     return (
         <div className="video-container" style={{ width: '100%', height: '100%' }}>
-            <div ref={containerRef} />
+            <iframe
+                ref={iframeRef}
+                src={embedUrl}
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+                title={`Stream ${streamId}`}
+            />
         </div>
     );
 };

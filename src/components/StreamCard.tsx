@@ -8,10 +8,11 @@ interface StreamCardProps {
     onRemove: () => void;
 }
 
-const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, onRemove }) => {
+const StreamCard: React.FC<StreamCardProps> = ({ streamId, onRemove }) => {
     const [isMuted, setIsMuted] = useState(true);
     const [volume, setVolume] = useState(50);
     const [hasSignal, setHasSignal] = useState(true);
+    const [channelName, setChannelName] = useState<string | null>(null);
 
     const toggleMute = () => setIsMuted(!isMuted);
 
@@ -37,7 +38,7 @@ const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, onRemove })
             <div className="live-badge-overlay">
                 <div className="badge-header">
                     <div className="live-indicator">LIVE</div>
-                    <span className="channel-id">@{streamId}</span>
+                    <span className="channel-id">{channelName || `@${streamId}`}</span>
                 </div>
                 <div className="qr-code">
                     {/* Placeholder for QR Code */}
@@ -51,36 +52,41 @@ const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, onRemove })
                 onClick={toggleMute}
                 title={isMuted ? "Click to Unmute" : "Click to Mute"}
             >
-                {isMuted && (
-                    <div className="mute-indicator">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.38.28-.8.52-1.25.7V19c1.02-.21 1.95-.65 2.74-1.25L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z" /></svg>
-                    </div>
-                )}
             </div>
 
             {/* Video Player Core */}
             <div className="player-wrapper">
                 <VideoPlayer
                     streamId={streamId}
-                    platform={platform}
                     isMuted={isMuted}
                     volume={volume}
                     onSignalError={() => setHasSignal(false)}
+                    onMetadata={(data: { author: string }) => setChannelName(data.author)}
                 />
             </div>
 
             {/* Bottom Controls (Volume) */}
-            <div className="card-controls bottom">
+            <div className="card-controls bottom permanent">
                 <div className="volume-control">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
+                    {isMuted ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5L6 9H2v6h4l5 4V5z" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
+                    ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
+                    )}
                     <input
                         type="range"
                         min="0"
                         max="100"
-                        value={volume}
-                        onChange={(e) => setVolume(Number(e.target.value))}
+                        value={isMuted ? 0 : volume}
+                        onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setVolume(val);
+                            if (val > 0) setIsMuted(false);
+                            else setIsMuted(true);
+                        }}
                         onClick={(e) => e.stopPropagation()}
                     />
+                    <span className="volume-percentage">{isMuted ? 0 : volume}%</span>
                 </div>
             </div>
         </div>

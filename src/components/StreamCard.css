@@ -15,6 +15,7 @@
 .player-wrapper {
     width: 100%;
     height: 100%;
+    pointer-events: none;
 }
 
 .click-overlay {
@@ -27,20 +28,13 @@
     justify-content: center;
 }
 
-.mute-indicator {
-    background: rgba(0, 0, 0, 0.6);
-    padding: 1rem;
-    border-radius: 50%;
-    color: white;
-    opacity: 0.8;
-}
-
 .card-controls {
     position: absolute;
     z-index: 20;
     padding: 0.5rem;
     opacity: 0;
     transition: opacity 0.2s;
+    pointer-events: auto;
 }
 
 .stream-card:hover .card-controls {
@@ -50,6 +44,10 @@
 .card-controls.top {
     top: 0;
     right: 0;
+}
+
+.card-controls.bottom.permanent {
+    opacity: 1;
 }
 
 .card-controls.bottom {
@@ -90,6 +88,14 @@
     width: 80px;
     accent-color: var(--primary);
     cursor: pointer;
+}
+
+.volume-percentage {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 35px;
+    text-align: right;
 }
 
 .live-badge-overlay {

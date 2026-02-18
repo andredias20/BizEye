@@ -10,8 +10,10 @@ interface Stream {
 
 function App() {
   const [activeStreams, setActiveStreams] = useState<Stream[]>([
-    { id: 'UC-lHJZR3Gqxm24_Vd_AJ5Yw', platform: 'youtube' }, // Example Channel ID
-    { id: 'UC1vGMAE4jR4SnySnt_O2C_A', platform: 'youtube' }
+    { id: 'UCDt4dFdsJyjjA8mQULkOLLw', platform: 'youtube' }, 
+    { id: 'UCvgSmIdI92W4KnP15fJwfwA', platform: 'youtube' },
+    { id: 'UC13ikrGSy3E2AveqLAI9lqg', platform: 'youtube' },
+    { id: 'UCPX0gLduKAfgr-HJENa7CFw', platform: 'youtube' }
   ]);
 
   const addStream = (idOrUrl: string) => {
