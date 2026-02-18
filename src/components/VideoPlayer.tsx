@@ -33,29 +33,48 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         [streamId]);
 
     useEffect(() => {
-        // Load YouTube API if not already loaded
-        if (!window.YT) {
-            const tag = document.createElement('script');
-            tag.src = "https://www.youtube.com/iframe_api";
-            const firstScriptTag = document.getElementsByTagName('script')[0];
-            firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+        let isCancelled = false;
 
-            window.onYouTubeIframeAPIReady = () => {
+        const checkYoutubeApi = () => {
+            if (isCancelled) return;
+
+            if (window.YT && window.YT.Player) {
                 initPlayer();
-            };
-        } else {
-            initPlayer();
+            } else {
+                // If not ready, check again in 100ms
+                setTimeout(checkYoutubeApi, 100);
+            }
+        };
+
+        // Load YouTube API if not already loaded or currently loading
+        if (!window.YT) {
+            const existingScript = document.getElementById('yt-iframe-api');
+            if (!existingScript) {
+                const tag = document.createElement('script');
+                tag.id = 'yt-iframe-api';
+                tag.src = "https://www.youtube.com/iframe_api";
+                const firstScriptTag = document.getElementsByTagName('script')[0];
+                firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+            }
         }
 
+        checkYoutubeApi();
+
         return () => {
+            isCancelled = true;
             if (playerRef.current) {
-                playerRef.current.destroy();
+                try {
+                    playerRef.current.destroy();
+                    playerRef.current = null;
+                } catch (e) {
+                    console.error("Error destroying player:", e);
+                }
             }
         };
     }, [streamId]);
 
     const initPlayer = () => {
-        if (!iframeRef.current || !window.YT) return;
+        if (!iframeRef.current || !window.YT || !window.YT.Player || playerRef.current) return;
 
         // Initialize player on existing iframe
         playerRef.current = new window.YT.Player(iframeRef.current, {
