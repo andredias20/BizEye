@@ -3,7 +3,8 @@
     background-color: black;
     border-radius: 8px;
     overflow: hidden;
-    aspect-ratio: 16 / 9;
+    height: 100%;
+    width: 100%;
     border: 1px solid #222;
     transition: transform 0.2s, border-color 0.2s;
 }
