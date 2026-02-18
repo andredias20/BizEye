@@ -2,10 +2,7 @@ import React from 'react';
 import './StreamDashboard.css';
 import StreamCard from './StreamCard';
 
-interface Stream {
-    id: string;
-    platform: 'youtube' | 'twitch';
-}
+import type { Stream } from '../types';
 
 interface StreamDashboardProps {
     streams: Stream[];
@@ -13,18 +10,21 @@ interface StreamDashboardProps {
 }
 
 const StreamDashboard: React.FC<StreamDashboardProps> = ({ streams, onRemoveStream }) => {
-    const getGridClass = () => {
+    // Dynamic grid sizing:
+    // 1-2 streams: 1 or 2 cols
+    // 3-4 streams: 2 cols
+    // 5-6 streams: 3 cols
+    // > 6 streams: auto-fit
+    const getGridStyle = () => {
         const count = streams.length;
-        if (count === 0) return 'grid-empty';
-        if (count === 1) return 'grid-1';
-        if (count === 2) return 'grid-2';
-        if (count === 3) return 'grid-3';
-        if (count >= 4) return 'grid-4';
-        return '';
+        if (count <= 1) return { gridTemplateColumns: '1fr' };
+        if (count <= 4) return { gridTemplateColumns: 'repeat(2, 1fr)' };
+        if (count <= 9) return { gridTemplateColumns: 'repeat(3, 1fr)' };
+        return { gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))' };
     };
 
     return (
-        <main className={`stream-grid ${getGridClass()}`}>
+        <main className="stream-grid" style={getGridStyle()}>
             {streams.length === 0 ? (
                 <div className="empty-state">
                     <h2>No active streams</h2>
@@ -33,7 +33,7 @@ const StreamDashboard: React.FC<StreamDashboardProps> = ({ streams, onRemoveStre
             ) : (
                 streams.map((stream) => (
                     <StreamCard
-                        key={stream.id}
+                        key={`${stream.platform}-${stream.id}`}
                         streamId={stream.id}
                         platform={stream.platform}
                         onRemove={() => onRemoveStream(stream.id)}

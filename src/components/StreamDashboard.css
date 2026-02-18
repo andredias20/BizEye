@@ -17,34 +17,10 @@
     color: var(--text-muted);
 }
 
-.grid-1 {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr;
-}
-
-.grid-2 {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr;
-}
-
-/* 3 Streams: 2 on top, 1 full width on bottom */
-.grid-3 {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-}
-
-.grid-3> :last-child {
-    grid-column: span 2;
-}
-
-.grid-4 {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-}
-
+/* Dynamic grid styles are handled in StreamDashboard.tsx */
 @media (max-width: 768px) {
     .grid-1 {
-        grid-template_columns: 1fr;
+        grid-template-columns: 1fr;
         grid-template-rows: 1fr;
     }
 

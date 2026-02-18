@@ -1,37 +1,13 @@
 import React from 'react';
 import './Header.css';
 
-interface HeaderProps {
-  onAddStream: (channelId: string) => void;
-}
-
-const Header: React.FC<HeaderProps> = ({ onAddStream }) => {
-  const [inputValue, setInputValue] = React.useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (inputValue.trim()) {
-      onAddStream(inputValue.trim());
-      setInputValue('');
-    }
-  };
-
+const Header: React.FC = () => {
   return (
     <header className="main-header">
       <div className="header-left">
         <h1 className="logo">BIZ<span> EYE</span></h1>
         <div className="badge">LIVE</div>
       </div>
-
-      <form className="add-stream-form" onSubmit={handleSubmit}>
-        <input
-          type="text"
-          placeholder="YouTube Channel ID / URL..."
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-        />
-        <button type="submit">ADD STREAM</button>
-      </form>
 
       <div className="header-right">
         <button className="icon-btn">
