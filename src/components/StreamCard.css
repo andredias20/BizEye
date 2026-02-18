@@ -1,0 +1,171 @@
+.stream-card {
+    position: relative;
+    background-color: black;
+    border-radius: 8px;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    border: 1px solid #222;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.stream-card:hover {
+    border-color: var(--primary);
+}
+
+.player-wrapper {
+    width: 100%;
+    height: 100%;
+}
+
+.click-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mute-indicator {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 1rem;
+    border-radius: 50%;
+    color: white;
+    opacity: 0.8;
+}
+
+.card-controls {
+    position: absolute;
+    z-index: 20;
+    padding: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.stream-card:hover .card-controls {
+    opacity: 1;
+}
+
+.card-controls.top {
+    top: 0;
+    right: 0;
+}
+
+.card-controls.bottom {
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    left: 0;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.remove-btn {
+    background: var(--error);
+    color: white;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.volume-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-bottom: 0.5rem;
+    margin-right: 0.5rem;
+}
+
+.volume-control input[type="range"] {
+    width: 80px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.live-badge-overlay {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    z-index: 15;
+    pointer-events: none;
+}
+
+.badge-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.live-indicator {
+    background: #ff0000;
+    color: white;
+    font-size: 0.6rem;
+    font-weight: bold;
+    padding: 1px 4px;
+    border-radius: 2px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.channel-id {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.qr-box {
+    width: 40px;
+    height: 40px;
+    background: white;
+    border: 4px solid white;
+    border-radius: 2px;
+    opacity: 0.8;
+}
+
+.signal-loss {
+    position: absolute;
+    inset: 0;
+    background: #111;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.signal-content h2 {
+    color: var(--primary);
+    letter-spacing: 4px;
+    margin-top: 1rem;
+}
+
+.signal-content p {
+    color: var(--text-muted);
+    font-weight: bold;
+}
