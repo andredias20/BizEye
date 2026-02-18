@@ -40,50 +40,56 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
         const ucMatch = cleanInput.match(/UC[a-zA-Z0-9_-]{22}/);
         if (ucMatch) return ucMatch[0];
 
-        // 3. Try to find a handle (@...) or name
+        // 3. Identify Handle or Channel Name
         let handle = '';
-        const handleMatch = cleanInput.match(/@([a-zA-Z0-9._-]+)/);
-        if (handleMatch) {
-            handle = `@${handleMatch[1]}`;
-        } else if (cleanInput.includes('youtube.com/')) {
+        if (cleanInput.includes('youtube.com/')) {
             try {
                 const url = new URL(cleanInput.includes('http') ? cleanInput : `https://${cleanInput}`);
                 const pathParts = url.pathname.split('/').filter(p => !['c', 'user', 'channel'].includes(p) && p !== '');
                 handle = pathParts[0] || '';
-                if (!handle.startsWith('@') && handle) handle = `@${handle}`;
             } catch (e) {
-                const parts = cleanInput.split('/').filter(p => p);
-                handle = parts[parts.length - 1] || '';
+                handle = cleanInput.split('/').pop() || '';
             }
         } else {
-            handle = cleanInput.startsWith('@') ? cleanInput : `@${cleanInput}`;
+            handle = cleanInput;
+        }
+
+        // Standardize handle format
+        if (handle && !handle.startsWith('@') && !handle.startsWith('UC')) {
+            handle = `@${handle}`;
         }
 
         if (!handle) throw new Error('Could not identify a YouTube handle or ID in the input.');
 
-        // 3. API Resolution
+        // 4. API Resolution
         if (!YOUTUBE_API_KEY) {
             throw new Error('YT CONFIG ERROR: YouTube API Key missing. Enter UC ID directly or fix .env.');
         }
 
         try {
-            console.log(`Resolving YouTube handle: ${handle}`);
+            console.log(`Step 1: Trying forHandle resolution for: ${handle}`);
 
             // Step A: Try direct channel lookup by handle
             const hRes = await fetch(
-                `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${handle}&key=${YOUTUBE_API_KEY}`
+                `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(handle)}&key=${YOUTUBE_API_KEY}`
             );
-            const hData = await hRes.json();
-            if (hData.items?.[0]?.id) return hData.items[0].id;
 
+            if (hRes.ok) {
+                const hData = await hRes.json();
+                if (hData.items?.[0]?.id) return hData.items[0].id;
+            }
+
+            console.log(`Step 2: Fallback to Search for: ${handle}`);
             // Step B: Fallback to Search (more robust for custom URLs/names)
             const sRes = await fetch(
                 `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(handle)}&maxResults=1&key=${YOUTUBE_API_KEY}`
             );
-            const sData = await sRes.json();
 
-            if (sData.items?.[0]?.snippet?.channelId) {
-                return sData.items[0].snippet.channelId;
+            if (sRes.ok) {
+                const sData = await sRes.json();
+                if (sData.items?.[0]?.snippet?.channelId) {
+                    return sData.items[0].snippet.channelId;
+                }
             }
 
             throw new Error(`Channel not found for: ${handle}. Try using the full Channel URL.`);
