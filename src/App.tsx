@@ -12,7 +12,9 @@ function App() {
     { id: 'UCDt4dFdsJyjjA8mQULkOLLw', platform: 'youtube' },
     { id: 'UCvgSmIdI92W4KnP15fJwfwA', platform: 'youtube' },
     { id: 'UC13ikrGSy3E2AveqLAI9lqg', platform: 'youtube' },
-    { id: 'alanzoka', platform: 'twitch' },
+    { id: 'UCPX0gLduKAfgr-HJENa7CFw', platform: 'youtube' },
+    { id: 'UC0aogS8ogMaDUZKKKLKH8fg', platform: 'youtube' },
+    { id: 'UCwRM1SXROyxSSJqrOTQzILw', platform: 'youtube' },
   ]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 

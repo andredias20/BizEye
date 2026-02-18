@@ -32,7 +32,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
     const embedUrl = React.useMemo(() => {
         const origin = window.location.origin;
-        return `https://www.youtube.com/embed/live_stream?channel=${streamId}&enablejsapi=1&autoplay=1&mute=1&controls=0&rel=0&modestbranding=1&origin=${origin}`;
+        return `https://www.youtube.com/embed/live_stream?channel=${streamId}&enablejsapi=1&autoplay=1&mute=1&controls=0&rel=0&modestbranding=1&origin=${origin}&vq=hd1080`;
     }, [streamId]);
 
     useEffect(() => {
@@ -77,6 +77,16 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 onReady: (event: any) => {
                     setIsPlayerReady(true);
                     event.target.setVolume(volume);
+
+                    // Suggest 1080p quality
+                    try {
+                        if (event.target.setPlaybackQuality) {
+                            event.target.setPlaybackQuality('hd1080');
+                        }
+                    } catch (e) {
+                        console.warn("YouTube setPlaybackQuality error:", e);
+                    }
+
                     event.target.playVideo();
                     if (isMuted) event.target.mute();
                     else event.target.unMute();
