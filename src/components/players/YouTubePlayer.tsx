@@ -17,6 +17,23 @@ interface YouTubePlayerProps {
     onMetadata?: (data: { author: string; title: string }) => void;
 }
 
+const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY || '';
+
+const fetchYoutubeLiveVideoId = async (channelId: string): Promise<string | null> => {
+    if (!YOUTUBE_API_KEY) return null;
+    try {
+        const response = await fetch(
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&type=video&eventType=live&key=${YOUTUBE_API_KEY}`
+        );
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.items?.[0]?.id?.videoId || null;
+    } catch (error) {
+        console.error('Error fetching YouTube live video ID:', error);
+        return null;
+    }
+};
+
 const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     streamId,
     isMuted,
@@ -29,14 +46,22 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const playerRef = useRef<any>(null);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
+    const [currentVideoId, setCurrentVideoId] = useState<string | null>(
+        streamId.startsWith('UC') ? null : streamId
+    );
 
     const embedUrl = React.useMemo(() => {
         if (!streamId) return '';
         const origin = window.location.origin;
-        const isChannel = streamId.startsWith('UC');
-        const baseUrl = isChannel
-            ? `https://www.youtube.com/embed/live_stream?channel=${streamId}`
-            : `https://www.youtube.com/embed/${streamId}`;
+
+        let baseUrl = '';
+        if (currentVideoId) {
+            baseUrl = `https://www.youtube.com/embed/${currentVideoId}`;
+        } else if (streamId.startsWith('UC')) {
+            baseUrl = `https://www.youtube.com/embed/live_stream?channel=${streamId}`;
+        } else {
+            baseUrl = `https://www.youtube.com/embed/${streamId}`;
+        }
 
         const params = new URLSearchParams({
             enablejsapi: '1',
@@ -50,7 +75,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         });
 
         return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${params.toString()}`;
-    }, [streamId]);
+    }, [streamId, currentVideoId]);
 
     useEffect(() => {
         let isCancelled = false;
@@ -119,7 +144,22 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                         if (data?.author) onMetadata({ author: data.author, title: data.title });
                     }
                 },
-                onError: () => onSignalError()
+                onError: async (event: any) => {
+                    console.warn(`YouTube player error for ${streamId}:`, event.data);
+
+                    // Attempt fallback if using channel ID and not already using a direct videoId
+                    if (streamId.startsWith('UC') && !currentVideoId) {
+                        console.log(`Attempting fallback search for channel ${streamId}`);
+                        const videoId = await fetchYoutubeLiveVideoId(streamId);
+                        if (videoId) {
+                            console.log(`Fallback search found videoId: ${videoId}`);
+                            setCurrentVideoId(videoId);
+                            return; // Fallback will trigger iframe reload via currentVideoId state
+                        }
+                    }
+
+                    onSignalError();
+                }
             }
         });
     };
