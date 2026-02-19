@@ -5,14 +5,15 @@ import VideoPlayer from './VideoPlayer';
 interface StreamCardProps {
     streamId: string;
     platform: 'youtube' | 'twitch' | 'kick';
+    title?: string;
     onRemove: () => void;
 }
 
-const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, onRemove }) => {
+const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, title, onRemove }) => {
     const [isMuted, setIsMuted] = useState(true);
     const [volume, setVolume] = useState(50);
     const [hasSignal, setHasSignal] = useState(true);
-    const [channelName, setChannelName] = useState<string | null>(null);
+    const [channelName, setChannelName] = useState<string | null>(title || null);
 
     const toggleMute = () => setIsMuted(!isMuted);
 
@@ -29,8 +30,17 @@ const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, onRemove })
                     <button className="remove-btn signal-remove" onClick={onRemove} title="Remover Stream">✕</button>
                     <div className="signal-content">
                         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 19h19" /><path d="M5 19l4-8" /><path d="M12 19V7l-3 4" /><path d="M16 19v-4l-3 4" /></svg>
-                        <h2>PERDEMOS O SINAL</h2>
-                        <p>MAS VOLTAMOS JÁ</p>
+                        {platform === 'youtube' ? (
+                            <>
+                                <h2>{title || channelName || `@${streamId}`}</h2>
+                                <p>OFFLINE</p>
+                            </>
+                        ) : (
+                            <>
+                                <h2>PERDEMOS O SINAL</h2>
+                                <p>MAS VOLTAMOS JÁ</p>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
@@ -40,7 +50,7 @@ const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, onRemove })
                 <div className="badge-header">
                     <div className="live-indicator">LIVE</div>
                     <div className={`platform-icon ${platform}`}>{platform}</div>
-                    <span className="channel-id">{channelName || `@${streamId}`}</span>
+                    <span className="channel-id">{channelName || title || `@${streamId}`}</span>
                 </div>
             </div>
 
@@ -64,7 +74,10 @@ const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, onRemove })
                     volume={volume}
                     setVolume={setVolume}
                     onSignalError={() => setHasSignal(false)}
-                    onMetadata={(data: { author: string }) => setChannelName(data.author)}
+                    onMetadata={(data: { author: string }) => {
+                        // Only update if we don't have a specific title from the modal/hardcoded state
+                        if (!title) setChannelName(data.author);
+                    }}
                 />
             </div>
         </div >

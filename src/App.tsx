@@ -9,18 +9,18 @@ import type { Stream, Platform } from './types'
 
 function App() {
   const [activeStreams, setActiveStreams] = useState<Stream[]>([
-    { id: 'UCDt4dFdsJyjjA8mQULkOLLw', platform: 'youtube' },
-    { id: 'UCvgSmIdI92W4KnP15fJwfwA', platform: 'youtube' },
-    { id: 'UC13ikrGSy3E2AveqLAI9lqg', platform: 'youtube' },
-    { id: 'UCPX0gLduKAfgr-HJENa7CFw', platform: 'youtube' },
-    { id: 'UC0aogS8ogMaDUZKKKLKH8fg', platform: 'youtube' },
-    { id: 'UCwRM1SXROyxSSJqrOTQzILw', platform: 'youtube' },
+    { id: 'UCDt4dFdsJyjjA8mQULkOLLw', platform: 'youtube', title: 'Rato' },
+    { id: 'UCvgSmIdI92W4KnP15fJwfwA', platform: 'youtube', title: 'ACF' },
+    { id: 'UC13ikrGSy3E2AveqLAI9lqg', platform: 'youtube', title: 'Richard' },
+    { id: 'UCPX0gLduKAfgr-HJENa7CFw', platform: 'youtube', title: 'Cariani' },
+    { id: 'UC0aogS8ogMaDUZKKKLKH8fg', platform: 'youtube', title: 'Gordox' },
+    { id: 'UCwRM1SXROyxSSJqrOTQzILw', platform: 'youtube', title: 'Tonimek' },
   ]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const addStream = (id: string, platform: Platform) => {
+  const addStream = (id: string, platform: Platform, title?: string) => {
     if (!activeStreams.find(s => s.id === id && s.platform === platform)) {
-      setActiveStreams(prev => [...prev, { id, platform }]);
+      setActiveStreams(prev => [...prev, { id, platform, title }]);
     }
     setIsModalOpen(false);
   };

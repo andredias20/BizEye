@@ -5,7 +5,7 @@ import './AddStreamModal.css';
 interface AddStreamModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAdd: (id: string, platform: Platform) => void;
+    onAdd: (id: string, platform: Platform, title?: string) => void;
 }
 
 const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd }) => {
@@ -19,7 +19,7 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
 
     if (!isOpen) return null;
 
-    const resolveYoutubeId = async (input: string) => {
+    const resolveYoutubeId = async (input: string): Promise<{ id: string; title: string }> => {
         const cleanInput = input.trim();
 
         // 1. Try to extract Video ID from watch?v= or youtu.be/
@@ -27,10 +27,11 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
             try {
                 const url = new URL(cleanInput.includes('http') ? cleanInput : `https://${cleanInput}`);
                 if (url.hostname.includes('youtu.be')) {
-                    return url.pathname.slice(1);
+                    const id = url.pathname.slice(1);
+                    return { id, title: id }; // Default title to ID for direct video links
                 }
                 const videoId = url.searchParams.get('v');
-                if (videoId) return videoId;
+                if (videoId) return { id: videoId, title: videoId };
             } catch (e) {
                 // fall through
             }
@@ -38,7 +39,7 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
 
         // 2. Try to find a UC ID directly (regex)
         const ucMatch = cleanInput.match(/UC[a-zA-Z0-9_-]{22}/);
-        if (ucMatch) return ucMatch[0];
+        if (ucMatch) return { id: ucMatch[0], title: ucMatch[0] };
 
         // 3. Identify Handle or Channel Name
         let handle = '';
@@ -71,12 +72,17 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
 
             // Step A: Try direct channel lookup by handle
             const hRes = await fetch(
-                `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(handle)}&key=${YOUTUBE_API_KEY}`
+                `https://www.googleapis.com/youtube/v3/channels?part=id,snippet&forHandle=${encodeURIComponent(handle)}&key=${YOUTUBE_API_KEY}`
             );
 
             if (hRes.ok) {
                 const hData = await hRes.json();
-                if (hData.items?.[0]?.id) return hData.items[0].id;
+                if (hData.items?.[0]) {
+                    return {
+                        id: hData.items[0].id,
+                        title: hData.items[0].snippet?.title || handle
+                    };
+                }
             }
 
             console.log(`Step 2: Fallback to Search for: ${handle}`);
@@ -88,7 +94,10 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
             if (sRes.ok) {
                 const sData = await sRes.json();
                 if (sData.items?.[0]?.snippet?.channelId) {
-                    return sData.items[0].snippet.channelId;
+                    return {
+                        id: sData.items[0].snippet.channelId,
+                        title: sData.items[0].snippet.title || handle
+                    };
                 }
             }
 
@@ -106,10 +115,13 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
 
         try {
             let id = inputValue.trim();
+            let title = id;
             if (!id) throw new Error('Please enter a link or ID');
 
             if (platform === 'youtube') {
-                id = await resolveYoutubeId(id);
+                const resolved = await resolveYoutubeId(id);
+                id = resolved.id;
+                title = resolved.title;
             } else {
                 // Twitch/Kick handle extraction
                 if (id.includes('.com/') || id.includes('.tv/')) {
@@ -121,10 +133,11 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
                         id = id.split('/').pop() || id;
                     }
                 }
+                title = id;
             }
 
-            console.log(`Adding ${platform} stream: ${id}`);
-            onAdd(id, platform);
+            console.log(`Adding ${platform} stream: ${id} (${title})`);
+            onAdd(id, platform, title || id);
             onClose();
             setInputValue('');
         } catch (err: any) {

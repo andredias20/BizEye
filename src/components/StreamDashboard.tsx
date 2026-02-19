@@ -36,6 +36,7 @@ const StreamDashboard: React.FC<StreamDashboardProps> = ({ streams, onRemoveStre
                         key={`${stream.platform}-${stream.id}`}
                         streamId={stream.id}
                         platform={stream.platform}
+                        title={stream.title}
                         onRemove={() => onRemoveStream(stream.id)}
                     />
                 ))

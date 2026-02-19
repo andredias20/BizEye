@@ -31,6 +31,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     const [isPlayerReady, setIsPlayerReady] = useState(false);
 
     const embedUrl = React.useMemo(() => {
+        if (!streamId) return '';
         const origin = window.location.origin;
         const isChannel = streamId.startsWith('UC');
         const baseUrl = isChannel
