@@ -11,9 +11,17 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ currentPage, streamCount, onAddStream, onNavigate }) => {
+  const getFullscreenTarget = () => {
+    if (currentPage === 'watch') {
+      return document.querySelector<HTMLElement>('.watch-page') || document.documentElement;
+    }
+
+    return document.documentElement;
+  };
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch((err) => {
+      getFullscreenTarget().requestFullscreen().catch((err) => {
         console.error(`Error attempting to enable fullscreen: ${err.message}`);
       });
     } else {

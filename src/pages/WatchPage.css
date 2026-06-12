@@ -1,10 +1,12 @@
 .watch-page {
+    position: relative;
     flex: 1 1 auto;
     height: auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    background: #03040a;
 }
 
 .watch-toolbar {
@@ -63,10 +65,83 @@
     background: var(--accent-cyan);
 }
 
+.watch-page:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    background: #03040a;
+}
+
+.watch-page:fullscreen .watch-toolbar {
+    position: absolute;
+    top: 0.75rem;
+    left: 50%;
+    z-index: 1200;
+    width: auto;
+    max-width: min(560px, calc(100vw - 1rem));
+    padding: 0.28rem;
+    transform: translateX(-50%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    background: rgba(2, 4, 10, 0.46);
+    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.34);
+    opacity: 0.18;
+    backdrop-filter: blur(12px);
+    transition: opacity 0.2s, background 0.2s;
+}
+
+.watch-page:fullscreen .watch-toolbar:hover,
+.watch-page:fullscreen .watch-toolbar:focus-within {
+    background: rgba(2, 4, 10, 0.72);
+    opacity: 0.92;
+}
+
+.watch-page:fullscreen .watch-toolbar>div:first-child {
+    display: none;
+}
+
+.watch-page:fullscreen .layout-control {
+    gap: 0.18rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.watch-page:fullscreen .layout-control button {
+    min-width: 48px;
+    min-height: 28px;
+    padding: 0 0.5rem;
+    font-size: 0.72rem;
+}
+
+.watch-page:fullscreen .layout-control button.active {
+    background: rgba(34, 211, 238, 0.82);
+}
+
+.watch-page:fullscreen .stream-grid {
+    width: 100%;
+    height: 100%;
+}
+
+.watch-page:fullscreen .fab-container {
+    display: none;
+}
+
 @media (max-width: 700px) {
     .watch-toolbar {
         align-items: stretch;
         flex-direction: column;
         padding: 0.65rem;
+    }
+
+    .watch-page:fullscreen .watch-toolbar {
+        right: 0.5rem;
+        left: 0.5rem;
+        width: auto;
+        max-width: none;
+        transform: none;
+    }
+
+    .watch-page:fullscreen .layout-control {
+        justify-content: center;
     }
 }
