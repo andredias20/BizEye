@@ -2,11 +2,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 1rem;
-    height: 32px;
-    background-color: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--surface);
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    min-height: var(--header-height);
+    background: rgba(7, 7, 12, 0.84);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--border-soft);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -15,37 +16,130 @@
 .header-left {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.logo-button {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+
+.logo-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(34, 211, 238, 0.4);
+    border-radius: 8px;
+    background: #02040a;
+    color: var(--accent-cyan);
+    font-family: var(--mono-font);
+    font-size: 0.72rem;
+    font-weight: 800;
+    box-shadow: 0 0 28px rgba(34, 211, 238, 0.16);
 }
 
 .logo {
-    font-size: 1rem;
+    font-size: 0.98rem;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
 }
 
 .logo span {
-    color: var(--primary);
+    color: var(--accent-cyan);
 }
 
-.badge {
-    background-color: var(--primary);
-    color: black;
-    font-size: 0.7rem;
-    font-weight: bold;
-    padding: 2px 6px;
-    border-radius: 4px;
+.live-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--text-muted);
+    border: 1px solid rgba(0, 255, 136, 0.24);
+    border-radius: 999px;
+    padding: 0.42rem 0.7rem;
+    background: rgba(0, 255, 136, 0.08);
+    font-family: var(--mono-font);
+    font-size: 0.72rem;
+    white-space: nowrap;
+}
+
+.live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--accent-green);
+    box-shadow: 0 0 18px rgba(0, 255, 136, 0.74);
+}
+
+.header-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.25rem;
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.header-nav button,
+.header-action,
+.icon-btn {
+    min-height: 34px;
+}
+
+.header-nav button {
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-weight: 700;
+    padding: 0 0.9rem;
+}
+
+.header-nav button.active {
+    background: rgba(238, 241, 248, 0.11);
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .header-right {
     display: flex;
-    gap: 1rem;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.header-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.32rem;
+    border: 1px solid rgba(34, 211, 238, 0.32);
+    border-radius: 999px;
+    background: rgba(34, 211, 238, 0.11);
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 800;
+    padding: 0 0.9rem;
+    white-space: nowrap;
 }
 
 .icon-btn {
-    background: none;
-    border: none;
+    width: 36px;
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
     color: var(--text-muted);
     cursor: pointer;
     display: flex;
@@ -55,4 +149,35 @@
 
 .icon-btn:hover {
     color: white;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+@media (max-width: 760px) {
+    .main-header {
+        flex-wrap: wrap;
+    }
+
+    .header-nav {
+        order: 3;
+        width: 100%;
+    }
+
+    .header-nav button {
+        flex: 1;
+    }
+
+    .live-pill {
+        display: none;
+    }
+}
+
+@media (max-width: 460px) {
+    .header-action {
+        width: 34px;
+        padding: 0;
+    }
+
+    .header-action-text {
+        display: none;
+    }
 }

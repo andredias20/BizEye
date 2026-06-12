@@ -1,50 +1,105 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 import Header from './components/Header'
-import StreamDashboard from './components/StreamDashboard'
-import AddStreamButton from './components/AddStreamButton'
 import AddStreamModal from './components/AddStreamModal'
+import HomePage from './pages/HomePage'
+import WatchPage from './pages/WatchPage'
+import { starterStreams } from './data/creators'
+import {
+  loadStoredStreams,
+  loadStoredWatchLayout,
+  saveStoredStreams,
+  saveStoredWatchLayout,
+} from './storage/preferences'
 
-import type { Stream, Platform } from './types'
+import type { Platform, Stream, ViewLayoutMode } from './types'
+
+type AppPage = 'home' | 'watch';
+
+const getPageFromHash = (): AppPage => {
+  return window.location.hash === '#/watch' ? 'watch' : 'home';
+};
 
 function App() {
-  const [activeStreams, setActiveStreams] = useState<Stream[]>([
-    { id: 'UCDt4dFdsJyjjA8mQULkOLLw', platform: 'youtube', title: 'Rato' },
-    { id: 'UCvgSmIdI92W4KnP15fJwfwA', platform: 'youtube', title: 'ACF' },
-    { id: 'UC13ikrGSy3E2AveqLAI9lqg', platform: 'youtube', title: 'Richard' },
-    { id: 'UCPX0gLduKAfgr-HJENa7CFw', platform: 'youtube', title: 'Cariani' },
-    { id: 'UC0aogS8ogMaDUZKKKLKH8fg', platform: 'youtube', title: 'Gordox' },
-    { id: 'UCwRM1SXROyxSSJqrOTQzILw', platform: 'youtube', title: 'Tonimek' },
-  ]);
+  const [activeStreams, setActiveStreams] = useState<Stream[]>(() => loadStoredStreams(starterStreams));
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState<AppPage>(getPageFromHash);
+  const [layoutMode, setLayoutMode] = useState<ViewLayoutMode>(() => loadStoredWatchLayout('balanced'));
+
+  useEffect(() => {
+    const handleHashChange = () => setCurrentPage(getPageFromHash());
+    window.addEventListener('hashchange', handleHashChange);
+
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const navigateTo = (page: AppPage) => {
+    window.location.hash = page === 'watch' ? '/watch' : '/';
+    setCurrentPage(page);
+  };
+
+  const updateActiveStreams = (getNextStreams: (streams: Stream[]) => Stream[]) => {
+    setActiveStreams((previousStreams) => {
+      const nextStreams = getNextStreams(previousStreams);
+
+      if (nextStreams !== previousStreams) {
+        saveStoredStreams(nextStreams);
+      }
+
+      return nextStreams;
+    });
+  };
 
   const addStream = (id: string, platform: Platform, title?: string) => {
-    if (!activeStreams.find(s => s.id === id && s.platform === platform)) {
-      setActiveStreams(prev => [...prev, { id, platform, title }]);
-    }
+    updateActiveStreams((streams) => {
+      if (streams.find(s => s.id === id && s.platform === platform)) return streams;
+
+      return [...streams, { id, platform, title }];
+    });
     setIsModalOpen(false);
   };
 
-  const removeStream = (id: string) => {
-    setActiveStreams(activeStreams.filter(s => s.id !== id));
+  const removeStream = (id: string, platform: Platform) => {
+    updateActiveStreams((streams) => streams.filter(s => !(s.id === id && s.platform === platform)));
+  };
+
+  const changeLayoutMode = (mode: ViewLayoutMode) => {
+    setLayoutMode(mode);
+    saveStoredWatchLayout(mode);
   };
 
   return (
-    <>
-      <Header />
-      <StreamDashboard
-        streams={activeStreams}
-        onRemoveStream={removeStream}
+    <div className={`app-shell app-shell--${currentPage}`}>
+      <Header
+        currentPage={currentPage}
+        streamCount={activeStreams.length}
+        onAddStream={() => setIsModalOpen(true)}
+        onNavigate={navigateTo}
       />
 
-      <AddStreamButton onClick={() => setIsModalOpen(true)} />
+      {currentPage === 'watch' ? (
+        <WatchPage
+          layoutMode={layoutMode}
+          onAddStream={() => setIsModalOpen(true)}
+          onLayoutModeChange={changeLayoutMode}
+          onRemoveStream={removeStream}
+          streams={activeStreams}
+        />
+      ) : (
+        <HomePage
+          activeStreams={activeStreams}
+          onAddStream={addStream}
+          onOpenAddModal={() => setIsModalOpen(true)}
+          onOpenWatch={() => navigateTo('watch')}
+        />
+      )}
 
       <AddStreamModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onAdd={addStream}
       />
-    </>
+    </div>
   )
 }
 

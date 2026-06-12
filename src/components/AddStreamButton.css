@@ -9,11 +9,11 @@
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background-color: var(--primary);
-    color: black;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+    color: #03040a;
     border: none;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(255, 107, 0, 0.4);
+    box-shadow: 0 14px 36px rgba(34, 211, 238, 0.26);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -23,8 +23,7 @@
 
 .fab-button:hover {
     transform: scale(1.1) rotate(90deg);
-    background-color: var(--primary-hover);
-    box-shadow: 0 6px 20px rgba(255, 107, 0, 0.6);
+    box-shadow: 0 16px 44px rgba(236, 72, 153, 0.28);
 }
 
 .tooltip {
@@ -32,7 +31,8 @@
     right: 80px;
     top: 50%;
     transform: translateY(-50%) translateX(10px);
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.84);
+    border: 1px solid var(--border-soft);
     color: white;
     padding: 6px 12px;
     border-radius: 4px;

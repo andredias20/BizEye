@@ -173,8 +173,8 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
-                <button className="modal-close" onClick={onClose}>✕</button>
-                <h2>Add New Stream</h2>
+                <button className="modal-close" onClick={onClose}>x</button>
+                <h2>Adicionar stream</h2>
 
                 <form onSubmit={handleSubmit}>
                     <div className="platform-selector">
@@ -203,14 +203,14 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
 
                     <div className="input-group">
                         <label>
-                            {platform === 'youtube' ? 'Channel URL or Handle (@...)' :
-                                platform === 'twitch' ? 'Twitch Username or Link' :
-                                    'Kick Username or Link'}
+                            {platform === 'youtube' ? 'Channel URL, ID ou Handle (@...)' :
+                                platform === 'twitch' ? 'Twitch username ou link' :
+                                    'Kick username ou link'}
                         </label>
                         <input
                             type="text"
                             autoFocus
-                            placeholder={platform === 'youtube' ? '@acfperformance' : 'username'}
+                            placeholder={platform === 'youtube' ? '@canal ou UC...' : 'username'}
                             value={inputValue}
                             onChange={e => setInputValue(e.target.value)}
                         />
@@ -219,7 +219,7 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
                     {error && <p className="error-message">{error}</p>}
 
                     <button type="submit" className="submit-btn" disabled={isLoading}>
-                        {isLoading ? 'RESOLVING...' : 'ADD TO DASHBOARD'}
+                        {isLoading ? 'RESOLVENDO...' : 'ADICIONAR NA WATCH'}
                     </button>
                 </form>
             </div>
