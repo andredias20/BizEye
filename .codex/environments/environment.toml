@@ -1,0 +1,20 @@
+version = 1
+name = "BizEye"
+
+[setup]
+script = "powershell -NoProfile -ExecutionPolicy Bypass -File .\\.codex\\setup-worktree.ps1"
+
+[[actions]]
+name = "Dev"
+icon = "run"
+command = "powershell -NoProfile -ExecutionPolicy Bypass -File .\\.codex\\start-dev.ps1"
+
+[[actions]]
+name = "Lint"
+icon = "run"
+command = "npm run lint"
+
+[[actions]]
+name = "Build"
+icon = "run"
+command = "npm run build"
