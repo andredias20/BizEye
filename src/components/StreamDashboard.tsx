@@ -7,7 +7,7 @@ import type { Stream, ViewLayoutMode } from '../types';
 interface StreamDashboardProps {
     layoutMode: ViewLayoutMode;
     streams: Stream[];
-    onRemoveStream: (id: string) => void;
+    onRemoveStream: (id: string, platform: Stream['platform']) => void;
 }
 
 type GridBounds = {
@@ -208,7 +208,7 @@ const StreamDashboard: React.FC<StreamDashboardProps> = ({ streams, layoutMode, 
                         streamId={stream.id}
                         platform={stream.platform}
                         title={stream.title}
-                        onRemove={() => onRemoveStream(stream.id)}
+                        onRemove={() => onRemoveStream(stream.id, stream.platform)}
                     />
                 ))
             )}

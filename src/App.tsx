@@ -5,6 +5,12 @@ import AddStreamModal from './components/AddStreamModal'
 import HomePage from './pages/HomePage'
 import WatchPage from './pages/WatchPage'
 import { starterStreams } from './data/creators'
+import {
+  loadStoredStreams,
+  loadStoredWatchLayout,
+  saveStoredStreams,
+  saveStoredWatchLayout,
+} from './storage/preferences'
 
 import type { Platform, Stream, ViewLayoutMode } from './types'
 
@@ -15,10 +21,10 @@ const getPageFromHash = (): AppPage => {
 };
 
 function App() {
-  const [activeStreams, setActiveStreams] = useState<Stream[]>(starterStreams);
+  const [activeStreams, setActiveStreams] = useState<Stream[]>(() => loadStoredStreams(starterStreams));
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<AppPage>(getPageFromHash);
-  const [layoutMode, setLayoutMode] = useState<ViewLayoutMode>('balanced');
+  const [layoutMode, setLayoutMode] = useState<ViewLayoutMode>(() => loadStoredWatchLayout('balanced'));
 
   useEffect(() => {
     const handleHashChange = () => setCurrentPage(getPageFromHash());
@@ -32,15 +38,34 @@ function App() {
     setCurrentPage(page);
   };
 
+  const updateActiveStreams = (getNextStreams: (streams: Stream[]) => Stream[]) => {
+    setActiveStreams((previousStreams) => {
+      const nextStreams = getNextStreams(previousStreams);
+
+      if (nextStreams !== previousStreams) {
+        saveStoredStreams(nextStreams);
+      }
+
+      return nextStreams;
+    });
+  };
+
   const addStream = (id: string, platform: Platform, title?: string) => {
-    if (!activeStreams.find(s => s.id === id && s.platform === platform)) {
-      setActiveStreams(prev => [...prev, { id, platform, title }]);
-    }
+    updateActiveStreams((streams) => {
+      if (streams.find(s => s.id === id && s.platform === platform)) return streams;
+
+      return [...streams, { id, platform, title }];
+    });
     setIsModalOpen(false);
   };
 
-  const removeStream = (id: string) => {
-    setActiveStreams(activeStreams.filter(s => s.id !== id));
+  const removeStream = (id: string, platform: Platform) => {
+    updateActiveStreams((streams) => streams.filter(s => !(s.id === id && s.platform === platform)));
+  };
+
+  const changeLayoutMode = (mode: ViewLayoutMode) => {
+    setLayoutMode(mode);
+    saveStoredWatchLayout(mode);
   };
 
   return (
@@ -56,7 +81,7 @@ function App() {
         <WatchPage
           layoutMode={layoutMode}
           onAddStream={() => setIsModalOpen(true)}
-          onLayoutModeChange={setLayoutMode}
+          onLayoutModeChange={changeLayoutMode}
           onRemoveStream={removeStream}
           streams={activeStreams}
         />

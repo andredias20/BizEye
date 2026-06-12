@@ -8,7 +8,7 @@ interface WatchPageProps {
     layoutMode: ViewLayoutMode;
     onAddStream: () => void;
     onLayoutModeChange: (mode: ViewLayoutMode) => void;
-    onRemoveStream: (id: string) => void;
+    onRemoveStream: (id: string, platform: Stream['platform']) => void;
     streams: Stream[];
 }
 
