@@ -1,19 +1,20 @@
 .stream-card {
     position: relative;
-    background-color: black;
-    border-radius: 8px;
-    overflow: hidden;
-    height: 100%;
     width: 100%;
-    border: 1px solid #222;
-    transition: transform 0.2s, border-color 0.2s;
-    /* Twitch Autoplay requirement: explicit visibility */
+    height: 100%;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 10px;
+    background: #000;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.34);
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
     visibility: visible !important;
     opacity: 1 !important;
 }
 
 .stream-card:hover {
-    border-color: var(--primary);
+    border-color: rgba(34, 211, 238, 0.66);
+    box-shadow: 0 18px 58px rgba(34, 211, 238, 0.12);
 }
 
 .player-wrapper {
@@ -21,17 +22,16 @@
     height: 100%;
     visibility: visible !important;
     opacity: 1 !important;
-    /* removed pointer-events: none to allow internal player controls */
 }
 
 .click-overlay {
     position: absolute;
     inset: 0;
     z-index: 10;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
 }
 
 .card-controls {
@@ -39,8 +39,8 @@
     z-index: 20;
     padding: 0.5rem;
     opacity: 0;
-    transition: opacity 0.2s;
     pointer-events: auto;
+    transition: opacity 0.2s;
 }
 
 .stream-card:hover .card-controls {
@@ -57,37 +57,39 @@
 }
 
 .card-controls.bottom {
-    bottom: 0;
     right: 0;
-    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    bottom: 0;
     left: 0;
     display: flex;
     justify-content: flex-end;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.86));
 }
 
 .remove-btn {
-    background: var(--error);
-    color: white;
-    border: none;
-    width: 24px;
-    height: 24px;
-    border-radius: 4px;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--error);
+    color: white;
+    cursor: pointer;
+    font-weight: 900;
+    line-height: 1;
 }
 
 .volume-control {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 4px 10px;
-    border-radius: 20px;
-    margin-bottom: 0.5rem;
     margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding: 4px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    background: rgba(0, 0, 0, 0.72);
 }
 
 .volume-control input[type="range"] {
@@ -97,35 +99,36 @@
 }
 
 .volume-percentage {
+    min-width: 35px;
+    color: var(--text);
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--text);
-    min-width: 35px;
     text-align: right;
 }
 
 .mute-btn-icon {
-    background: none;
-    border: none;
-    color: white;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
+    border: 0;
+    background: none;
+    color: white;
+    cursor: pointer;
     transition: transform 0.2s;
 }
 
 .mute-btn-icon:hover {
-    transform: scale(1.1);
     color: var(--primary);
+    transform: scale(1.1);
 }
 
 .live-badge-overlay {
     position: absolute;
-    top: 1rem;
-    left: 1rem;
+    top: 0.7rem;
+    left: 0.7rem;
     z-index: 15;
+    max-width: calc(100% - 1.4rem);
     pointer-events: none;
 }
 
@@ -133,19 +136,22 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 4px 8px;
-    border-radius: 4px;
+    max-width: 100%;
     margin-bottom: 0.5rem;
+    padding: 5px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.74);
+    backdrop-filter: blur(8px);
 }
 
 .live-indicator {
-    background: #ff0000;
+    border-radius: 2px;
+    padding: 1px 4px;
+    background: var(--error);
     color: white;
     font-size: 0.6rem;
     font-weight: bold;
-    padding: 1px 4px;
-    border-radius: 2px;
     animation: pulse 2s infinite;
 }
 
@@ -164,20 +170,20 @@
 }
 
 .platform-icon {
+    border-radius: 2px;
+    padding: 1px 4px;
+    background: rgba(255, 255, 255, 0.1);
     font-size: 0.6rem;
     font-weight: 900;
     text-transform: uppercase;
-    padding: 1px 4px;
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.1);
 }
 
 .platform-icon.youtube {
-    color: #ff0000;
+    color: #ff3333;
 }
 
 .platform-icon.twitch {
-    color: #9146ff;
+    color: #a970ff;
 }
 
 .platform-icon.kick {
@@ -185,33 +191,40 @@
 }
 
 .channel-id {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
     font-size: 0.8rem;
-    font-weight: 500;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .signal-loss {
     position: absolute;
     inset: 0;
-    background: #111;
     z-index: 30;
     display: flex;
     align-items: center;
     justify-content: center;
+    background:
+        linear-gradient(160deg, rgba(34, 211, 238, 0.1), transparent 45%),
+        #08080d;
     text-align: center;
 }
 
 .signal-content h2 {
-    color: var(--primary);
-    letter-spacing: 4px;
     margin-top: 1rem;
+    color: var(--primary);
+    letter-spacing: 0.16em;
 }
 
 .signal-remove {
     position: absolute;
     top: 0.5rem;
     right: 0.5rem;
-    pointer-events: auto;
     z-index: 40;
+    pointer-events: auto;
 }
 
 .signal-content p {

@@ -1,11 +1,22 @@
-/* App specific layout if needed */
-main {
-  flex: 1;
-}
-
 #root {
   width: 100%;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+.app-shell {
+  min-height: 100vh;
+  color: var(--text);
+  background:
+    linear-gradient(180deg, rgba(8, 8, 13, 0.62), rgba(8, 8, 13, 0.96)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0, rgba(255, 255, 255, 0.025) 1px, transparent 1px, transparent 96px),
+    var(--bg-dark);
+}
+
+.app-shell--watch {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }

@@ -21,13 +21,13 @@ const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, title, onRe
         <div className="stream-card">
             {/* Top Controls */}
             <div className="card-controls top">
-                <button className="remove-btn" onClick={onRemove}>✕</button>
+                <button className="remove-btn" onClick={onRemove}>x</button>
             </div>
 
             {/* Signal Loss Fallback */}
             {!hasSignal && (
                 <div className="signal-loss">
-                    <button className="remove-btn signal-remove" onClick={onRemove} title="Remover Stream">✕</button>
+                    <button className="remove-btn signal-remove" onClick={onRemove} title="Remover Stream">x</button>
                     <div className="signal-content">
                         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 19h19" /><path d="M5 19l4-8" /><path d="M12 19V7l-3 4" /><path d="M16 19v-4l-3 4" /></svg>
                         {platform === 'youtube' ? (
@@ -38,7 +38,7 @@ const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, title, onRe
                         ) : (
                             <>
                                 <h2>PERDEMOS O SINAL</h2>
-                                <p>MAS VOLTAMOS JÁ</p>
+                                <p>MAS VOLTAMOS JA</p>
                             </>
                         )}
                     </div>

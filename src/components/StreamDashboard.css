@@ -1,45 +1,33 @@
 .stream-grid {
     display: grid;
-    flex: 1;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    background-color: var(--bg-dark);
-    height: calc(100vh - 40px);
+    flex: 1 1 auto;
+    min-height: 0;
+    align-content: center;
+    justify-content: center;
+    padding: 8px;
+    background:
+        radial-gradient(circle at 50% 0%, rgba(34, 211, 238, 0.09), transparent 30%),
+        #03040a;
     overflow: hidden;
 }
 
+.stream-grid--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .empty-state {
-    grid-column: 1 / -1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     color: var(--text-muted);
+    gap: 0.35rem;
+    text-align: center;
 }
 
-/* Dynamic grid styles are handled in StreamDashboard.tsx */
-@media (max-width: 768px) {
-    .grid-1 {
-        grid-template-columns: 1fr;
-        grid-template-rows: 1fr;
-    }
-
-    .grid-2 {
-        grid-template-columns: 1fr;
-        grid-template-rows: 1fr 1fr;
-    }
-
-    .grid-3 {
-        grid-template-columns: 1fr;
-        grid-template-rows: 1fr 1fr 1fr;
-    }
-
-    .grid-3> :last-child {
-        grid-column: span 1;
-    }
-
-    .grid-4 {
-        grid-template-columns: 1fr;
-        grid-template-rows: repeat(4, 1fr);
-    }
+.empty-state h2 {
+    color: var(--text);
+    font-size: clamp(1.4rem, 3vw, 2.4rem);
 }
