@@ -2,11 +2,33 @@ import React, { useState } from 'react';
 import type { Platform } from '../types';
 import './AddStreamModal.css';
 
+type YoutubeChannelListResponse = {
+    items?: Array<{
+        id?: string;
+        snippet?: {
+            title?: string;
+        };
+    }>;
+};
+
+type YoutubeChannelSearchResponse = {
+    items?: Array<{
+        snippet?: {
+            channelId?: string;
+            title?: string;
+        };
+    }>;
+};
+
 interface AddStreamModalProps {
     isOpen: boolean;
     onClose: () => void;
     onAdd: (id: string, platform: Platform, title?: string) => void;
 }
+
+const getErrorMessage = (err: unknown) => {
+    return err instanceof Error ? err.message : 'Unexpected error';
+};
 
 const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd }) => {
     const [platform, setPlatform] = useState<Platform>('youtube');
@@ -32,7 +54,7 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
                 }
                 const videoId = url.searchParams.get('v');
                 if (videoId) return { id: videoId, title: videoId };
-            } catch (e) {
+            } catch {
                 // fall through
             }
         }
@@ -48,7 +70,7 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
                 const url = new URL(cleanInput.includes('http') ? cleanInput : `https://${cleanInput}`);
                 const pathParts = url.pathname.split('/').filter(p => !['c', 'user', 'channel'].includes(p) && p !== '');
                 handle = pathParts[0] || '';
-            } catch (e) {
+            } catch {
                 handle = cleanInput.split('/').pop() || '';
             }
         } else {
@@ -76,11 +98,12 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
             );
 
             if (hRes.ok) {
-                const hData = await hRes.json();
-                if (hData.items?.[0]) {
+                const hData = await hRes.json() as YoutubeChannelListResponse;
+                const channel = hData.items?.[0];
+                if (channel?.id) {
                     return {
-                        id: hData.items[0].id,
-                        title: hData.items[0].snippet?.title || handle
+                        id: channel.id,
+                        title: channel.snippet?.title || handle
                     };
                 }
             }
@@ -92,7 +115,7 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
             );
 
             if (sRes.ok) {
-                const sData = await sRes.json();
+                const sData = await sRes.json() as YoutubeChannelSearchResponse;
                 if (sData.items?.[0]?.snippet?.channelId) {
                     return {
                         id: sData.items[0].snippet.channelId,
@@ -102,7 +125,7 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
             }
 
             throw new Error(`Channel not found for: ${handle}. Try using the full Channel URL.`);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('YouTube resolution failed:', err);
             throw err;
         }
@@ -129,7 +152,7 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
                         const url = new URL(id.includes('http') ? id : `https://${id}`);
                         const pathParts = url.pathname.split('/').filter(p => p);
                         id = pathParts[0] || id;
-                    } catch (e) {
+                    } catch {
                         id = id.split('/').pop() || id;
                     }
                 }
@@ -140,8 +163,8 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
             onAdd(id, platform, title || id);
             onClose();
             setInputValue('');
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(getErrorMessage(err));
         } finally {
             setIsLoading(false);
         }

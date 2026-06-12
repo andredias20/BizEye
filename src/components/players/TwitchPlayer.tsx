@@ -1,5 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+type TwitchPlayerInstance = {
+    addEventListener: (eventName: string, callback: () => void) => void;
+    play: () => void;
+    setMuted: (muted: boolean) => void;
+    setVolume: (volume: number) => void;
+};
+
+type TwitchPlayerConstructor = {
+    new (element: HTMLElement, options: {
+        width: string;
+        height: string;
+        channel: string;
+        parent: string[];
+        autoplay: boolean;
+        muted: boolean;
+    }): TwitchPlayerInstance;
+    READY: string;
+    OFFLINE: string;
+    ERROR: string;
+};
+
 interface TwitchPlayerProps {
     streamId: string;
     isMuted: boolean;
@@ -11,7 +32,9 @@ interface TwitchPlayerProps {
 
 declare global {
     interface Window {
-        Twitch: any;
+        Twitch?: {
+            Player: TwitchPlayerConstructor;
+        };
     }
 }
 
@@ -24,11 +47,58 @@ const TwitchPlayer: React.FC<TwitchPlayerProps> = ({
     onSignalError
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const playerRef = useRef<any>(null);
+    const playerRef = useRef<TwitchPlayerInstance | null>(null);
+    const isMutedRef = useRef(isMuted);
+    const volumeRef = useRef(volume);
+    const onSignalErrorRef = useRef(onSignalError);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
 
     useEffect(() => {
+        isMutedRef.current = isMuted;
+        volumeRef.current = volume;
+        onSignalErrorRef.current = onSignalError;
+    }, [isMuted, onSignalError, volume]);
+
+    const initTwitchPlayer = React.useCallback(() => {
+        if (!containerRef.current || !window.Twitch?.Player || playerRef.current) return;
+
+        const options = {
+            width: '100%',
+            height: '100%',
+            channel: streamId,
+            parent: [window.location.hostname],
+            autoplay: true,
+            muted: isMutedRef.current
+        };
+
+        const player = new window.Twitch.Player(containerRef.current, options);
+        playerRef.current = player;
+
+        player.addEventListener(window.Twitch.Player.READY, () => {
+            setIsPlayerReady(true);
+            player.setVolume(volumeRef.current / 100);
+            player.setMuted(isMutedRef.current);
+
+            // Explicitly call play to handle some browser autoplay restrictions if muted
+            try {
+                player.play();
+            } catch (e) {
+                console.warn("Twitch initial play() failed:", e);
+            }
+        });
+
+        player.addEventListener(window.Twitch.Player.OFFLINE, () => {
+            // Signal error or offline state
+        });
+
+        player.addEventListener(window.Twitch.Player.ERROR, () => {
+            onSignalErrorRef.current();
+        });
+    }, [streamId]);
+
+    useEffect(() => {
         let isCancelled = false;
+        const container = containerRef.current;
 
         const loadTwitchScript = () => {
             if (document.getElementById('twitch-embed-script')) {
@@ -63,47 +133,11 @@ const TwitchPlayer: React.FC<TwitchPlayerProps> = ({
                 playerRef.current = null;
             }
             setIsPlayerReady(false);
-            if (containerRef.current) {
-                containerRef.current.innerHTML = '';
+            if (container) {
+                container.innerHTML = '';
             }
         };
-    }, [streamId]);
-
-    const initTwitchPlayer = () => {
-        if (!containerRef.current || !window.Twitch?.Player || playerRef.current) return;
-
-        const options = {
-            width: '100%',
-            height: '100%',
-            channel: streamId,
-            parent: [window.location.hostname],
-            autoplay: true,
-            muted: isMuted
-        };
-
-        playerRef.current = new window.Twitch.Player(containerRef.current, options);
-
-        playerRef.current.addEventListener(window.Twitch.Player.READY, () => {
-            setIsPlayerReady(true);
-            playerRef.current.setVolume(volume / 100);
-            playerRef.current.setMuted(isMuted);
-
-            // Explicitly call play to handle some browser autoplay restrictions if muted
-            try {
-                playerRef.current.play();
-            } catch (e) {
-                console.warn("Twitch initial play() failed:", e);
-            }
-        });
-
-        playerRef.current.addEventListener(window.Twitch.Player.OFFLINE, () => {
-            // Signal error or offline state
-        });
-
-        playerRef.current.addEventListener(window.Twitch.Player.ERROR, () => {
-            onSignalError();
-        });
-    };
+    }, [initTwitchPlayer, streamId]);
 
     useEffect(() => {
         if (isPlayerReady && playerRef.current) {

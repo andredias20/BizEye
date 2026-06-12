@@ -1,9 +1,52 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+type YouTubeVideoData = {
+    author?: string;
+    title?: string;
+};
+
+type YouTubePlayerInstance = {
+    destroy: () => void;
+    getVideoData: () => YouTubeVideoData;
+    mute: () => void;
+    playVideo: () => void;
+    setPlaybackQuality?: (quality: string) => void;
+    setVolume: (volume: number) => void;
+    unMute: () => void;
+};
+
+type YouTubePlayerEvent = {
+    target: YouTubePlayerInstance;
+    data?: number;
+};
+
+type YouTubePlayerConstructor = {
+    new (element: HTMLIFrameElement, options: {
+        events: {
+            onReady?: (event: YouTubePlayerEvent) => void;
+            onStateChange?: (event: YouTubePlayerEvent) => void;
+            onError?: (event: YouTubePlayerEvent) => void;
+        };
+    }): YouTubePlayerInstance;
+};
+
+type YouTubeLiveSearchResponse = {
+    items?: Array<{
+        id?: {
+            videoId?: string;
+        };
+    }>;
+};
+
 declare global {
     interface Window {
-        onYouTubeIframeAPIReady: () => void;
-        YT: any;
+        onYouTubeIframeAPIReady?: () => void;
+        YT?: {
+            Player: YouTubePlayerConstructor;
+            PlayerState: {
+                PLAYING: number;
+            };
+        };
     }
 }
 
@@ -26,7 +69,7 @@ const fetchYoutubeLiveVideoId = async (channelId: string): Promise<string | null
             `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&type=video&eventType=live&key=${YOUTUBE_API_KEY}`
         );
         if (!response.ok) return null;
-        const data = await response.json();
+        const data = await response.json() as YouTubeLiveSearchResponse;
         return data.items?.[0]?.id?.videoId || null;
     } catch (error) {
         console.error('Error fetching YouTube live video ID:', error);
@@ -44,11 +87,22 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     onMetadata
 }) => {
     const iframeRef = useRef<HTMLIFrameElement>(null);
-    const playerRef = useRef<any>(null);
+    const playerRef = useRef<YouTubePlayerInstance | null>(null);
+    const isMutedRef = useRef(isMuted);
+    const volumeRef = useRef(volume);
+    const onMetadataRef = useRef(onMetadata);
+    const onSignalErrorRef = useRef(onSignalError);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
     const [currentVideoId, setCurrentVideoId] = useState<string | null>(
         streamId.startsWith('UC') ? null : streamId
     );
+
+    useEffect(() => {
+        isMutedRef.current = isMuted;
+        volumeRef.current = volume;
+        onMetadataRef.current = onMetadata;
+        onSignalErrorRef.current = onSignalError;
+    }, [isMuted, onMetadata, onSignalError, volume]);
 
     const embedUrl = React.useMemo(() => {
         if (!streamId) return '';
@@ -76,6 +130,62 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
         return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${params.toString()}`;
     }, [streamId, currentVideoId]);
+
+    const initYoutubePlayer = React.useCallback(() => {
+        if (!iframeRef.current || !window.YT?.Player || playerRef.current) return;
+
+        const youtubeApi = window.YT;
+        playerRef.current = new youtubeApi.Player(iframeRef.current, {
+            events: {
+                onReady: (event: YouTubePlayerEvent) => {
+                    setIsPlayerReady(true);
+                    event.target.setVolume(volumeRef.current);
+
+                    // Suggest 1080p quality
+                    try {
+                        if (event.target.setPlaybackQuality) {
+                            event.target.setPlaybackQuality('hd1080');
+                        }
+                    } catch (e) {
+                        console.warn("YouTube setPlaybackQuality error:", e);
+                    }
+
+                    event.target.playVideo();
+                    if (isMutedRef.current) event.target.mute();
+                    else event.target.unMute();
+
+                    const metadataHandler = onMetadataRef.current;
+                    if (metadataHandler) {
+                        const data = event.target.getVideoData();
+                        if (data?.author) metadataHandler({ author: data.author, title: data.title || '' });
+                    }
+                },
+                onStateChange: (event: YouTubePlayerEvent) => {
+                    const metadataHandler = onMetadataRef.current;
+                    if (metadataHandler && event.data === youtubeApi.PlayerState.PLAYING) {
+                        const data = event.target.getVideoData();
+                        if (data?.author) metadataHandler({ author: data.author, title: data.title || '' });
+                    }
+                },
+                onError: async (event: YouTubePlayerEvent) => {
+                    console.warn(`YouTube player error for ${streamId}:`, event.data);
+
+                    // Attempt fallback if using channel ID and not already using a direct videoId
+                    if (streamId.startsWith('UC') && !currentVideoId) {
+                        console.log(`Attempting fallback search for channel ${streamId}`);
+                        const videoId = await fetchYoutubeLiveVideoId(streamId);
+                        if (videoId) {
+                            console.log(`Fallback search found videoId: ${videoId}`);
+                            setCurrentVideoId(videoId);
+                            return; // Fallback will trigger iframe reload via currentVideoId state
+                        }
+                    }
+
+                    onSignalErrorRef.current();
+                }
+            }
+        });
+    }, [currentVideoId, streamId]);
 
     useEffect(() => {
         let isCancelled = false;
@@ -109,60 +219,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             }
             setIsPlayerReady(false);
         };
-    }, [streamId]);
-
-    const initYoutubePlayer = () => {
-        if (!iframeRef.current || !window.YT?.Player || playerRef.current) return;
-
-        playerRef.current = new window.YT.Player(iframeRef.current, {
-            events: {
-                onReady: (event: any) => {
-                    setIsPlayerReady(true);
-                    event.target.setVolume(volume);
-
-                    // Suggest 1080p quality
-                    try {
-                        if (event.target.setPlaybackQuality) {
-                            event.target.setPlaybackQuality('hd1080');
-                        }
-                    } catch (e) {
-                        console.warn("YouTube setPlaybackQuality error:", e);
-                    }
-
-                    event.target.playVideo();
-                    if (isMuted) event.target.mute();
-                    else event.target.unMute();
-
-                    if (onMetadata) {
-                        const data = event.target.getVideoData();
-                        if (data?.author) onMetadata({ author: data.author, title: data.title });
-                    }
-                },
-                onStateChange: (event: any) => {
-                    if (onMetadata && event.data === window.YT.PlayerState.PLAYING) {
-                        const data = event.target.getVideoData();
-                        if (data?.author) onMetadata({ author: data.author, title: data.title });
-                    }
-                },
-                onError: async (event: any) => {
-                    console.warn(`YouTube player error for ${streamId}:`, event.data);
-
-                    // Attempt fallback if using channel ID and not already using a direct videoId
-                    if (streamId.startsWith('UC') && !currentVideoId) {
-                        console.log(`Attempting fallback search for channel ${streamId}`);
-                        const videoId = await fetchYoutubeLiveVideoId(streamId);
-                        if (videoId) {
-                            console.log(`Fallback search found videoId: ${videoId}`);
-                            setCurrentVideoId(videoId);
-                            return; // Fallback will trigger iframe reload via currentVideoId state
-                        }
-                    }
-
-                    onSignalError();
-                }
-            }
-        });
-    };
+    }, [initYoutubePlayer, streamId]);
 
     useEffect(() => {
         if (isPlayerReady && playerRef.current) {
