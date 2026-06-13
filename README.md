@@ -1,24 +1,129 @@
 # BizEye
 
-React + TypeScript + Vite app for keeping multiple live-stream embeds visible in one dashboard.
+## Português
 
-## Requirements
+BizEye é uma aplicação React + TypeScript + Vite para organizar cards de lives em um painel de visualização. A proposta é facilitar o acompanhamento de vários criadores ao mesmo tempo, com uma tela `Watch` dedicada para exibir embeds ativos sem rolagem.
 
-- Node.js 20.19+ or 22.12+
-- npm
+### Recursos principais
 
-## Local Setup
+- Dashboard de streams com suporte a YouTube, Twitch e Kick.
+- Página inicial com criadores sugeridos e busca de canais do YouTube.
+- Modal para adicionar canais por URL, handle ou ID.
+- Tela `Watch` com modos de layout para priorizar equilíbrio, largura, altura, mais colunas ou mais linhas.
+- Persistência local das streams e do layout escolhido via `localStorage`.
+
+### Requisitos
+
+- Node.js 20.19+ ou 22.12+.
+- npm.
+
+### Configuração local
+
+Instale as dependências:
 
 ```powershell
 npm ci
+```
+
+Inicie o servidor de desenvolvimento:
+
+```powershell
 npm run dev -- --host 127.0.0.1
 ```
 
-Vite prints the local URL in the terminal. If another worktree is already using port `5173`, Vite will choose the next available port.
+O Vite exibirá a URL local no terminal. Se a porta `5173` já estiver em uso, outra porta disponível será escolhida automaticamente.
 
-## Codex Worktrees
+Para habilitar a busca de canais do YouTube, configure a variável de ambiente abaixo em um arquivo `.env` local:
 
-This repo includes a Codex local environment at:
+```text
+VITE_YOUTUBE_API_KEY=sua_chave_aqui
+```
+
+### Comandos básicos
+
+```powershell
+npm ci                         # instala as dependências
+npm run dev                    # inicia o Vite em modo desenvolvimento
+npm run lint                   # executa o ESLint
+npm run build                  # gera o build de produção
+npm run preview                # abre uma prévia local do build
+```
+
+### Worktrees no Codex
+
+Este repositório inclui uma configuração local do Codex em:
+
+```text
+.codex/environments/environment.toml
+```
+
+Ao criar um worktree no Codex, selecione o ambiente local `BizEye`. O script de setup executa:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\.codex\setup-worktree.ps1
+```
+
+Esse script valida Node/npm, instala dependências com `npm ci` e roda um build inicial de produção.
+
+Antes de finalizar alterações, execute:
+
+```powershell
+npm run lint
+npm run build
+```
+
+## English
+
+BizEye is a React + TypeScript + Vite application for organizing live-stream cards in a viewing dashboard. Its goal is to make it easier to monitor multiple creators at the same time, with a dedicated `Watch` screen for active embeds without scrolling.
+
+### Main features
+
+- Stream dashboard with YouTube, Twitch, and Kick support.
+- Home page with suggested creators and YouTube channel search.
+- Modal for adding channels by URL, handle, or ID.
+- `Watch` screen with layout modes that prioritize balance, width, height, more columns, or more rows.
+- Local persistence for selected streams and the chosen layout through `localStorage`.
+
+### Requirements
+
+- Node.js 20.19+ or 22.12+.
+- npm.
+
+### Local setup
+
+Install dependencies:
+
+```powershell
+npm ci
+```
+
+Start the development server:
+
+```powershell
+npm run dev -- --host 127.0.0.1
+```
+
+Vite will print the local URL in the terminal. If port `5173` is already in use, Vite will automatically choose another available port.
+
+To enable YouTube channel search, set the following environment variable in a local `.env` file:
+
+```text
+VITE_YOUTUBE_API_KEY=your_key_here
+```
+
+### Basic commands
+
+```powershell
+npm ci                         # install dependencies
+npm run dev                    # start Vite in development mode
+npm run lint                   # run ESLint
+npm run build                  # create a production build
+npm run preview                # preview the production build locally
+```
+
+### Codex worktrees
+
+This repository includes a local Codex environment at:
 
 ```text
 .codex/environments/environment.toml
@@ -32,19 +137,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\.codex\setup-worktree.ps1
 
 That script validates Node/npm, installs dependencies with `npm ci`, and runs an initial production build.
 
-Codex actions configured for this project:
-
-- `Dev`: starts Vite on `127.0.0.1`, defaulting to port `5173`.
-- `Lint`: runs `npm run lint`.
-- `Build`: runs `npm run build`.
-
-## Scripts
+Before finishing changes, run:
 
 ```powershell
-npm run dev
 npm run lint
 npm run build
-npm run preview
 ```
-
-Use `npm run lint` and `npm run build` before finishing changes.
