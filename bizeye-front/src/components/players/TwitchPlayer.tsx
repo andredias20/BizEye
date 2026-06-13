@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import type { PlaybackProfile } from '../../types';
 
 type TwitchPlayerInstance = {
     addEventListener: (eventName: string, callback: () => void) => void;
@@ -24,6 +25,7 @@ type TwitchPlayerConstructor = {
 interface TwitchPlayerProps {
     streamId: string;
     isMuted: boolean;
+    playbackProfile?: PlaybackProfile;
     setIsMuted: (muted: boolean) => void;
     volume: number;
     setVolume: (volume: number) => void;
@@ -41,6 +43,7 @@ declare global {
 const TwitchPlayer: React.FC<TwitchPlayerProps> = ({
     streamId,
     isMuted,
+    playbackProfile = 'standard',
     setIsMuted,
     volume,
     setVolume,
@@ -52,6 +55,7 @@ const TwitchPlayer: React.FC<TwitchPlayerProps> = ({
     const volumeRef = useRef(volume);
     const onSignalErrorRef = useRef(onSignalError);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
+    const showVolumeControls = playbackProfile !== 'firetv';
 
     useEffect(() => {
         isMutedRef.current = isMuted;
@@ -162,31 +166,32 @@ const TwitchPlayer: React.FC<TwitchPlayerProps> = ({
                 }}
             />
 
-            {/* Twitch Specific Volume Bar */}
-            <div className="card-controls bottom permanent">
-                <div className="volume-control">
-                    <button className="mute-btn-icon" onClick={() => setIsMuted(!isMuted)}>
-                        {isMuted ? (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5L6 9H2v6h4l5 4V5z" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
-                        ) : (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
-                        )}
-                    </button>
-                    <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={isMuted ? 0 : volume}
-                        onChange={(e) => {
-                            const val = Number(e.target.value);
-                            setVolume(val);
-                            if (val > 0) setIsMuted(false);
-                            else setIsMuted(true);
-                        }}
-                    />
-                    <span className="volume-percentage">{isMuted ? 0 : volume}%</span>
+            {showVolumeControls && (
+                <div className="card-controls bottom permanent">
+                    <div className="volume-control">
+                        <button className="mute-btn-icon" onClick={() => setIsMuted(!isMuted)}>
+                            {isMuted ? (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5L6 9H2v6h4l5 4V5z" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
+                            ) : (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
+                            )}
+                        </button>
+                        <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={isMuted ? 0 : volume}
+                            onChange={(e) => {
+                                const val = Number(e.target.value);
+                                setVolume(val);
+                                if (val > 0) setIsMuted(false);
+                                else setIsMuted(true);
+                            }}
+                        />
+                        <span className="volume-percentage">{isMuted ? 0 : volume}%</span>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };

@@ -3,9 +3,11 @@ import { FlagDefinitions, FlagValues } from 'flags/react'
 import './App.css'
 import Header from './components/Header'
 import AddStreamModal from './components/AddStreamModal'
+import FireTvPage from './pages/FireTvPage'
 import HomePage from './pages/HomePage'
 import WatchPage from './pages/WatchPage'
 import { starterStreams } from './data/creators'
+import { isFireTvLikeDevice } from './platform/fireTv'
 import { fetchYoutubeLiveStatuses } from './services/youtubeResolver'
 import {
   flagDefinitions,
@@ -23,10 +25,26 @@ import {
 
 import type { Platform, Stream, ViewLayoutMode } from './types'
 
-type AppPage = 'home' | 'watch';
+type AppPage = 'firetv' | 'home' | 'watch';
 
 const getPageFromHash = (): AppPage => {
-  return window.location.hash === '#/watch' ? 'watch' : 'home';
+  const hashRoute = window.location.hash.replace(/^#\/?/, '').replace(/\/$/, '');
+
+  if (hashRoute === 'firetv' || hashRoute === 'watch') {
+    return hashRoute;
+  }
+
+  if (window.location.hash) {
+    return 'home';
+  }
+
+  const pathRoute = window.location.pathname.replace(/^\/+/, '').replace(/\/$/, '');
+
+  if (pathRoute === 'firetv' || pathRoute === 'watch') {
+    return pathRoute;
+  }
+
+  return 'home';
 };
 
 function App() {
@@ -39,6 +57,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState<AppPage>(getPageFromHash);
   const [bizeyeResolveFlagValue, setBizeyeResolveFlagValue] = useState(getInitialBizeyeResolveFlagValue);
   const [layoutMode, setLayoutMode] = useState<ViewLayoutMode>(() => loadStoredWatchLayout('balanced'));
+  const didAutoRedirectFireTv = useRef(false);
   const didRefreshInitialLives = useRef(false);
 
   useEffect(() => {
@@ -47,6 +66,13 @@ function App() {
 
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  useEffect(() => {
+    if (didAutoRedirectFireTv.current || currentPage === 'firetv' || !isFireTvLikeDevice()) return;
+
+    didAutoRedirectFireTv.current = true;
+    window.location.hash = '/firetv';
+  }, [currentPage]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -120,7 +146,7 @@ function App() {
   }, [activeStreams, updateActiveStreams]);
 
   const navigateTo = (page: AppPage) => {
-    window.location.hash = page === 'watch' ? '/watch' : '/';
+    window.location.hash = page === 'watch' ? '/watch' : page === 'firetv' ? '/firetv' : '/';
     setCurrentPage(page);
   };
 
@@ -170,14 +196,24 @@ function App() {
       <FlagDefinitions definitions={flagDefinitions} />
       <FlagValues values={getFlagValues(bizeyeResolveFlagValue)} />
 
-      <Header
-        currentPage={currentPage}
-        streamCount={activeStreams.length}
-        onAddStream={() => setIsModalOpen(true)}
-        onNavigate={navigateTo}
-      />
+      {currentPage !== 'firetv' && (
+        <Header
+          currentPage={currentPage}
+          streamCount={activeStreams.length}
+          onAddStream={() => setIsModalOpen(true)}
+          onNavigate={navigateTo}
+        />
+      )}
 
-      {currentPage === 'watch' ? (
+      {currentPage === 'firetv' ? (
+        <FireTvPage
+          onLiveVideoResolved={updateYoutubeLiveVideo}
+          onOpenHome={() => navigateTo('home')}
+          onOpenWatch={() => navigateTo('watch')}
+          onRemoveStream={removeStream}
+          streams={activeStreams}
+        />
+      ) : currentPage === 'watch' ? (
         <WatchPage
           layoutMode={layoutMode}
           onAddStream={() => setIsModalOpen(true)}
@@ -195,11 +231,13 @@ function App() {
         />
       )}
 
-      <AddStreamModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onAdd={addStream}
-      />
+      {currentPage !== 'firetv' && (
+        <AddStreamModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onAdd={addStream}
+        />
+      )}
     </div>
   )
 }

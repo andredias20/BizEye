@@ -1,0 +1,72 @@
+.firetv-page {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    background: #000;
+}
+
+.firetv-toolbar {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    max-width: calc(100% - 16px);
+    padding: 0.35rem 0.45rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.62);
+    opacity: 0.34;
+}
+
+.firetv-toolbar:hover,
+.firetv-toolbar:focus-within {
+    opacity: 0.94;
+}
+
+.firetv-toolbar>div {
+    display: grid;
+    gap: 0.05rem;
+}
+
+.firetv-toolbar span {
+    color: var(--accent-cyan);
+    font-family: var(--mono-font);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.firetv-toolbar strong {
+    color: var(--text);
+    font-size: 0.78rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.firetv-toolbar nav {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.firetv-toolbar button {
+    min-height: 28px;
+    border: 0;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 0 0.55rem;
+}
+
+.firetv-page .stream-grid {
+    width: 100%;
+    height: 100%;
+}

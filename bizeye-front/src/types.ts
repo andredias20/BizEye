@@ -1,5 +1,7 @@
 export type Platform = 'youtube' | 'twitch' | 'kick';
 
+export type PlaybackProfile = 'firetv' | 'standard';
+
 export type ViewLayoutMode =
     | 'balanced'
     | 'max-horizontal'

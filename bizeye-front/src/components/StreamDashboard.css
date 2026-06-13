@@ -11,6 +11,11 @@
     overflow: hidden;
 }
 
+.stream-grid--firetv {
+    padding: 4px;
+    background: #000;
+}
+
 .stream-grid--empty {
     display: flex;
     align-items: center;

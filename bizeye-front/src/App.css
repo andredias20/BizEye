@@ -20,3 +20,11 @@
   height: 100vh;
   overflow: hidden;
 }
+
+.app-shell--firetv {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+}

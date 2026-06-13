@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Platform } from '../types';
+import type { PlaybackProfile, Platform } from '../types';
 import YouTubePlayer from './players/YouTubePlayer';
 import TwitchPlayer from './players/TwitchPlayer';
 import KickPlayer from './players/KickPlayer';
@@ -10,6 +10,7 @@ interface VideoPlayerProps {
     platform: Platform;
     videoId?: string;
     isMuted: boolean;
+    playbackProfile?: PlaybackProfile;
     setIsMuted: (muted: boolean) => void;
     volume: number;
     setVolume: (volume: number) => void;

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { fetchYoutubeLiveVideoId, recordYoutubeLiveVideoId } from '../../services/youtubeResolver';
+import type { PlaybackProfile } from '../../types';
 
 type YouTubeVideoData = {
     author?: string;
@@ -8,13 +9,13 @@ type YouTubeVideoData = {
 };
 
 type YouTubePlayerInstance = {
-    destroy: () => void;
-    getVideoData: () => YouTubeVideoData;
-    mute: () => void;
-    playVideo: () => void;
+    destroy?: () => void;
+    getVideoData?: () => YouTubeVideoData;
+    mute?: () => void;
+    playVideo?: () => void;
     setPlaybackQuality?: (quality: string) => void;
-    setVolume: (volume: number) => void;
-    unMute: () => void;
+    setVolume?: (volume: number) => void;
+    unMute?: () => void;
 };
 
 type YouTubePlayerEvent = {
@@ -48,6 +49,7 @@ interface YouTubePlayerProps {
     streamId: string;
     isMuted: boolean;
     liveStatus?: 'live' | 'offline' | 'unknown' | 'error' | 'quota_limited';
+    playbackProfile?: PlaybackProfile;
     videoId?: string;
     setIsMuted: (muted: boolean) => void;
     volume: number;
@@ -60,6 +62,7 @@ interface YouTubePlayerProps {
 const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     streamId,
     isMuted,
+    playbackProfile = 'standard',
     videoId,
     setIsMuted,
     volume,
@@ -79,6 +82,8 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     const [isPlayerReady, setIsPlayerReady] = useState(false);
     const [resolvedVideoId, setResolvedVideoId] = useState<string | null>(streamId.startsWith('UC') ? null : streamId);
     const currentVideoId = videoId || resolvedVideoId;
+    const preferredQuality = playbackProfile === 'firetv' ? 'hd720' : 'hd1080';
+    const showVolumeControls = playbackProfile !== 'firetv';
 
     useEffect(() => {
         isMutedRef.current = isMuted;
@@ -127,11 +132,12 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             rel: '0',
             modestbranding: '1',
             origin: origin,
-            vq: 'hd1080'
+            playsinline: '1',
+            vq: preferredQuality
         });
 
         return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${params.toString()}`;
-    }, [streamId, currentVideoId]);
+    }, [streamId, currentVideoId, preferredQuality]);
 
     const initYoutubePlayer = React.useCallback(() => {
         if (!iframeRef.current || !window.YT?.Player || playerRef.current) return;
@@ -141,22 +147,21 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             events: {
                 onReady: (event: YouTubePlayerEvent) => {
                     setIsPlayerReady(true);
-                    event.target.setVolume(volumeRef.current);
+                    event.target.setVolume?.(volumeRef.current);
 
-                    // Suggest 1080p quality
                     try {
                         if (event.target.setPlaybackQuality) {
-                            event.target.setPlaybackQuality('hd1080');
+                            event.target.setPlaybackQuality(preferredQuality);
                         }
                     } catch (e) {
                         console.warn("YouTube setPlaybackQuality error:", e);
                     }
 
-                    event.target.playVideo();
-                    if (isMutedRef.current) event.target.mute();
-                    else event.target.unMute();
+                    event.target.playVideo?.();
+                    if (isMutedRef.current) event.target.mute?.();
+                    else event.target.unMute?.();
 
-                    const data = event.target.getVideoData();
+                    const data = event.target.getVideoData?.();
                     const metadataHandler = onMetadataRef.current;
                     if (metadataHandler) {
                         if (data?.author) metadataHandler({ author: data.author, title: data.title || '' });
@@ -165,7 +170,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 },
                 onStateChange: (event: YouTubePlayerEvent) => {
                     const metadataHandler = onMetadataRef.current;
-                    const data = event.target.getVideoData();
+                    const data = event.target.getVideoData?.();
                     if (metadataHandler && event.data === youtubeApi.PlayerState.PLAYING) {
                         if (data?.author) metadataHandler({ author: data.author, title: data.title || '' });
                     }
@@ -195,7 +200,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 }
             }
         });
-    }, [currentVideoId, handleResolvedVideoData, streamId]);
+    }, [currentVideoId, handleResolvedVideoData, preferredQuality, streamId]);
 
     useEffect(() => {
         let isCancelled = false;
@@ -221,7 +226,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             isCancelled = true;
             if (playerRef.current) {
                 try {
-                    playerRef.current.destroy();
+                    playerRef.current.destroy?.();
                     playerRef.current = null;
                 } catch (e) {
                     console.error("Error destroying YouTube player:", e);
@@ -234,9 +239,9 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     useEffect(() => {
         if (isPlayerReady && playerRef.current) {
             try {
-                playerRef.current.setVolume(volume);
-                if (isMuted) playerRef.current.mute();
-                else playerRef.current.unMute();
+                playerRef.current.setVolume?.(volume);
+                if (isMuted) playerRef.current.mute?.();
+                else playerRef.current.unMute?.();
             } catch (e) {
                 console.error("YouTube Volume Error:", e);
             }
@@ -257,31 +262,32 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 style={{ width: '100%', height: '100%' }}
             />
 
-            {/* YouTube Specific Volume Bar */}
-            <div className="card-controls bottom permanent">
-                <div className="volume-control">
-                    <button className="mute-btn-icon" onClick={() => setIsMuted(!isMuted)}>
-                        {isMuted ? (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5L6 9H2v6h4l5 4V5z" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
-                        ) : (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
-                        )}
-                    </button>
-                    <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={isMuted ? 0 : volume}
-                        onChange={(e) => {
-                            const val = Number(e.target.value);
-                            setVolume(val);
-                            if (val > 0) setIsMuted(false);
-                            else setIsMuted(true);
-                        }}
-                    />
-                    <span className="volume-percentage">{isMuted ? 0 : volume}%</span>
+            {showVolumeControls && (
+                <div className="card-controls bottom permanent">
+                    <div className="volume-control">
+                        <button className="mute-btn-icon" onClick={() => setIsMuted(!isMuted)}>
+                            {isMuted ? (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5L6 9H2v6h4l5 4V5z" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
+                            ) : (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
+                            )}
+                        </button>
+                        <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={isMuted ? 0 : volume}
+                            onChange={(e) => {
+                                const val = Number(e.target.value);
+                                setVolume(val);
+                                if (val > 0) setIsMuted(false);
+                                else setIsMuted(true);
+                            }}
+                        />
+                        <span className="volume-percentage">{isMuted ? 0 : volume}%</span>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };
