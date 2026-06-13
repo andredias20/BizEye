@@ -279,14 +279,12 @@ export const resolveLiveForChannel = async (
   return discoverLiveVideo(client, channelId);
 };
 
-export const resolveCachedLiveStatuses = async (channelIds: string[]) => {
+export const resolveLiveStatuses = async (channelIds: string[]) => {
   const uniqueChannelIds = [...new Set(channelIds.filter(isYouTubeChannelId))];
 
   return Promise.all(
     uniqueChannelIds.map(async (channelId) =>
-      resolveLiveForChannel(channelId, {
-        allowDiscovery: false,
-      }).catch(() => ({
+      resolveLiveForChannel(channelId).catch(() => ({
         channelId,
         checkedAt: null,
         error: 'live_status_unavailable',

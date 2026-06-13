@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import {
   recordObservedLiveVideo,
-  resolveCachedLiveStatuses,
+  resolveLiveStatuses,
   resolveLiveForChannel,
 } from '../services/youtubeLiveResolver.js';
 import { fetchYouTubeJson } from '../services/youtube.js';
@@ -205,7 +205,7 @@ youtubeRoutes.post('/channels/live-status', async (c) => {
   }
 
   try {
-    const items = await resolveCachedLiveStatuses(parsed.data.channelIds);
+    const items = await resolveLiveStatuses(parsed.data.channelIds);
     return c.json({ items });
   } catch (error) {
     return c.json({ error: 'youtube_live_status_failed', message: getErrorMessage(error) }, 502);
