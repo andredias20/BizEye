@@ -8,6 +8,7 @@ interface WatchPageProps {
     layoutMode: ViewLayoutMode;
     onAddStream: () => void;
     onLayoutModeChange: (mode: ViewLayoutMode) => void;
+    onLiveVideoResolved: (channelId: string, videoId: string, title?: string) => void;
     onRemoveStream: (id: string, platform: Stream['platform']) => void;
     streams: Stream[];
 }
@@ -24,6 +25,7 @@ const WatchPage: React.FC<WatchPageProps> = ({
     layoutMode,
     onAddStream,
     onLayoutModeChange,
+    onLiveVideoResolved,
     onRemoveStream,
     streams,
 }) => {
@@ -52,6 +54,7 @@ const WatchPage: React.FC<WatchPageProps> = ({
 
             <StreamDashboard
                 layoutMode={layoutMode}
+                onLiveVideoResolved={onLiveVideoResolved}
                 onRemoveStream={onRemoveStream}
                 streams={streams}
             />

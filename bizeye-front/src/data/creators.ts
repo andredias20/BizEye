@@ -1,12 +1,9 @@
 import type { CreatorProfile, Stream } from '../types';
 
 export const starterStreams: Stream[] = [
-    { id: 'UCDt4dFdsJyjjA8mQULkOLLw', platform: 'youtube', title: 'Rato' },
     { id: 'UCvgSmIdI92W4KnP15fJwfwA', platform: 'youtube', title: 'ACF' },
-    { id: 'UC13ikrGSy3E2AveqLAI9lqg', platform: 'youtube', title: 'Richard' },
-    { id: 'UCPX0gLduKAfgr-HJENa7CFw', platform: 'youtube', title: 'Cariani' },
-    { id: 'UC0aogS8ogMaDUZKKKLKH8fg', platform: 'youtube', title: 'Gordox' },
-    { id: 'UCwRM1SXROyxSSJqrOTQzILw', platform: 'youtube', title: 'Tony Mac' },
+    { id: 'UCwRM1SXROyxSSJqrOTQzILw', platform: 'youtube', title: 'Tonimec' },
+    { id: 'UCP9uupJdJnpOEJzTtigLPOg', platform: 'youtube', title: 'EEBrasil' },
 ];
 
 export const featuredCreators: CreatorProfile[] = [
@@ -20,8 +17,15 @@ export const featuredCreators: CreatorProfile[] = [
     {
         id: 'UCwRM1SXROyxSSJqrOTQzILw',
         platform: 'youtube',
-        title: 'Tony Mac',
+        title: 'Tonimec',
         handle: 'UCwRM1SXROyxSSJqrOTQzILw',
         description: 'Exemplo pronto para entrar na tela Watch sem configurar nada.',
+    },
+    {
+        id: 'UCP9uupJdJnpOEJzTtigLPOg',
+        platform: 'youtube',
+        title: 'EEBrasil',
+        handle: '@enriedu',
+        description: 'Canal fixo para resolver live ativa pelo backend quando necessario.',
     },
 ];

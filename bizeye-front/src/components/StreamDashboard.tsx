@@ -6,6 +6,7 @@ import type { Stream, ViewLayoutMode } from '../types';
 
 interface StreamDashboardProps {
     layoutMode: ViewLayoutMode;
+    onLiveVideoResolved: (channelId: string, videoId: string, title?: string) => void;
     streams: Stream[];
     onRemoveStream: (id: string, platform: Stream['platform']) => void;
 }
@@ -148,7 +149,7 @@ const computeLayout = (count: number, bounds: GridBounds, mode: ViewLayoutMode):
     return [...fitCandidates].sort((a, b) => b.area - a.area || Math.abs(a.cols - a.rows) - Math.abs(b.cols - b.rows))[0] || best;
 };
 
-const StreamDashboard: React.FC<StreamDashboardProps> = ({ streams, layoutMode, onRemoveStream }) => {
+const StreamDashboard: React.FC<StreamDashboardProps> = ({ streams, layoutMode, onLiveVideoResolved, onRemoveStream }) => {
     const dashboardRef = useRef<HTMLElement | null>(null);
     const [bounds, setBounds] = useState<GridBounds>({ height: 0, width: 0 });
 
@@ -206,8 +207,11 @@ const StreamDashboard: React.FC<StreamDashboardProps> = ({ streams, layoutMode, 
                     <StreamCard
                         key={`${stream.platform}-${stream.id}`}
                         streamId={stream.id}
+                        liveStatus={stream.liveStatus}
                         platform={stream.platform}
                         title={stream.title}
+                        videoId={stream.videoId}
+                        onLiveVideoResolved={onLiveVideoResolved}
                         onRemove={() => onRemoveStream(stream.id, stream.platform)}
                     />
                 ))

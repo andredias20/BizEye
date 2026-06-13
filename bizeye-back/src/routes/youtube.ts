@@ -1,5 +1,10 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import {
+  recordObservedLiveVideo,
+  resolveCachedLiveStatuses,
+  resolveLiveForChannel,
+} from '../services/youtubeLiveResolver.js';
 import { fetchYouTubeJson } from '../services/youtube.js';
 
 export const youtubeRoutes = new Hono();
@@ -30,16 +35,16 @@ type YouTubeChannelListResponse = {
   }>;
 };
 
-type YouTubeLiveSearchResponse = {
-  items?: Array<{
-    id?: {
-      videoId?: string;
-    };
-  }>;
-};
-
 const resolveInputSchema = z.object({
   input: z.string().trim().min(1),
+});
+
+const liveStatusSchema = z.object({
+  channelIds: z.array(z.string().trim().regex(/^UC[a-zA-Z0-9_-]{22}$/)).max(25),
+});
+
+const liveObservationSchema = z.object({
+  videoId: z.string().trim().regex(/^[a-zA-Z0-9_-]{11}$/),
 });
 
 const getErrorMessage = (error: unknown) => {
@@ -192,25 +197,42 @@ youtubeRoutes.post('/channels/resolve', async (c) => {
   }
 });
 
+youtubeRoutes.post('/channels/live-status', async (c) => {
+  const parsed = liveStatusSchema.safeParse(await c.req.json().catch(() => null));
+
+  if (!parsed.success) {
+    return c.json({ error: 'invalid_channel_ids' }, 400);
+  }
+
+  try {
+    const items = await resolveCachedLiveStatuses(parsed.data.channelIds);
+    return c.json({ items });
+  } catch (error) {
+    return c.json({ error: 'youtube_live_status_failed', message: getErrorMessage(error) }, 502);
+  }
+});
+
 youtubeRoutes.get('/channels/:channelId/live', async (c) => {
   const channelId = c.req.param('channelId');
 
   try {
-    const data = await fetchYouTubeJson<YouTubeLiveSearchResponse>({
-      path: '/search',
-      params: {
-        part: 'snippet',
-        channelId,
-        eventType: 'live',
-        type: 'video',
-      },
-    });
-
-    return c.json({
-      channelId,
-      videoId: data.items?.[0]?.id?.videoId || null,
-    });
+    return c.json(await resolveLiveForChannel(channelId));
   } catch (error) {
     return c.json({ error: 'youtube_live_lookup_failed', message: getErrorMessage(error) }, 502);
+  }
+});
+
+youtubeRoutes.post('/channels/:channelId/live', async (c) => {
+  const channelId = c.req.param('channelId');
+  const parsed = liveObservationSchema.safeParse(await c.req.json().catch(() => null));
+
+  if (!parsed.success) {
+    return c.json({ error: 'invalid_video_id' }, 400);
+  }
+
+  try {
+    return c.json(await recordObservedLiveVideo(channelId, parsed.data.videoId));
+  } catch (error) {
+    return c.json({ error: 'youtube_live_observation_failed', message: getErrorMessage(error) }, 502);
   }
 });

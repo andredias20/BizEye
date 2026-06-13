@@ -9,8 +9,10 @@ export type ViewLayoutMode =
 
 export interface Stream {
     id: string;
+    liveStatus?: 'live' | 'offline' | 'unknown' | 'error' | 'quota_limited';
     platform: Platform;
     title?: string;
+    videoId?: string;
 }
 
 export interface CreatorProfile extends Stream {

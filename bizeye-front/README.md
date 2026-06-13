@@ -25,6 +25,15 @@ The frontend reads the Vercel boolean flag `bizeye-resolve` through the serverle
 - Local Vite dev uses `VITE_FEATURE_BIZEYE_RESOLVE` as the fallback value because Vite does not run Vercel Functions.
 - For local testing, override the value in the browser with `localStorage.setItem('bizeye-resolve', 'true')` or remove the key to use the environment/default value again.
 
+## YouTube Live Resolution
+
+The base Watch list is fixed to ACF, Tonimec, and EEBrasil. On page load/F5, the frontend asks the backend for cached live status for active YouTube channel IDs.
+
+- Fresh `channelId -> videoId` cache is used without calling the YouTube API.
+- Expired live cache is validated by the backend before being reused.
+- If there is no usable cache, the player first tries the `live_stream?channel=` embed and records a discovered `videoId` when the IFrame API exposes one.
+- If the channel embed fails, the backend falls back to YouTube API discovery and returns the active `videoId`.
+
 ## Codex Worktrees
 
 This repo includes a Codex local environment at:

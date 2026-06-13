@@ -4,6 +4,7 @@ const STREAMS_STORAGE_KEY = 'bizeye.streams.v1';
 const WATCH_LAYOUT_STORAGE_KEY = 'bizeye.watchLayout.v1';
 
 const platforms: Platform[] = ['youtube', 'twitch', 'kick'];
+const liveStatuses: Array<NonNullable<Stream['liveStatus']>> = ['live', 'offline', 'unknown', 'error', 'quota_limited'];
 const layoutModes: ViewLayoutMode[] = ['balanced', 'max-horizontal', 'max-vertical', 'width-guided', 'height-guided'];
 
 const canUseLocalStorage = () => {
@@ -24,11 +25,19 @@ const normalizeStream = (value: unknown): Stream | null => {
     const title = typeof candidate.title === 'string' && candidate.title.trim()
         ? candidate.title.trim()
         : undefined;
+    const videoId = typeof candidate.videoId === 'string' && candidate.videoId.trim()
+        ? candidate.videoId.trim()
+        : undefined;
+    const liveStatus = typeof candidate.liveStatus === 'string' && liveStatuses.includes(candidate.liveStatus as NonNullable<Stream['liveStatus']>)
+        ? candidate.liveStatus as NonNullable<Stream['liveStatus']>
+        : undefined;
 
     return {
         id,
+        liveStatus,
         platform: platform as Platform,
         title,
+        videoId,
     };
 };
 
@@ -59,6 +68,29 @@ export const loadStoredStreams = (fallback: Stream[]) => {
         console.warn('Could not load BizEye streams from localStorage:', error);
         return fallback;
     }
+};
+
+export const mergeFixedStreams = (streams: Stream[], fixedStreams: Stream[]) => {
+    const fixedByKey = new Map(fixedStreams.map((stream) => [`${stream.platform}:${stream.id}`, stream]));
+    const merged = streams.map((stream) => {
+        const fixed = fixedByKey.get(`${stream.platform}:${stream.id}`);
+        if (!fixed) return stream;
+
+        return {
+            ...stream,
+            title: fixed.title,
+        };
+    });
+    const currentKeys = new Set(merged.map((stream) => `${stream.platform}:${stream.id}`));
+
+    for (const fixedStream of fixedStreams) {
+        const key = `${fixedStream.platform}:${fixedStream.id}`;
+        if (!currentKeys.has(key)) {
+            merged.push(fixedStream);
+        }
+    }
+
+    return uniqueStreams(merged);
 };
 
 export const saveStoredStreams = (streams: Stream[]) => {

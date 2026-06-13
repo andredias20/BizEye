@@ -16,6 +16,19 @@ export type YoutubeResolvedInput = {
   title: string;
 };
 
+export type YoutubeLiveStatus = 'live' | 'offline' | 'unknown' | 'quota_limited' | 'error';
+
+export type YoutubeLiveStatusResult = {
+  channelId: string;
+  checkedAt?: string | null;
+  embeddable?: boolean;
+  expiresAt?: string | null;
+  source?: 'cache' | 'youtube' | 'stale_cache' | 'unknown';
+  status: YoutubeLiveStatus;
+  title?: string;
+  videoId?: string | null;
+};
+
 type YoutubeSearchResponse = {
   items?: Array<{
     id?: {
@@ -55,7 +68,12 @@ type BackendSearchResponse = {
 };
 
 type BackendLiveResponse = {
+  status?: YoutubeLiveStatus;
   videoId?: string | null;
+};
+
+type BackendLiveStatusesResponse = {
+  items?: YoutubeLiveStatusResult[];
 };
 
 const shouldUseBackendResolver = async () => {
@@ -248,6 +266,28 @@ const fetchLiveVideoIdWithBackend = async (channelId: string) => {
   return data.videoId || null;
 };
 
+const fetchLiveStatusesWithBackend = async (channelIds: string[]) => {
+  const data = await fetchJson<BackendLiveStatusesResponse>(`${RESOLVER_BASE_URL}/youtube/channels/live-status`, {
+    body: JSON.stringify({ channelIds }),
+    headers: {
+      'content-type': 'application/json',
+    },
+    method: 'POST',
+  });
+
+  return data.items || [];
+};
+
+const recordLiveVideoWithBackend = async (channelId: string, videoId: string) => {
+  return fetchJson<YoutubeLiveStatusResult>(`${RESOLVER_BASE_URL}/youtube/channels/${encodeURIComponent(channelId)}/live`, {
+    body: JSON.stringify({ videoId }),
+    headers: {
+      'content-type': 'application/json',
+    },
+    method: 'POST',
+  });
+};
+
 const fetchLiveVideoIdWithGoogleApis = async (channelId: string) => {
   if (!YOUTUBE_API_KEY) return null;
 
@@ -305,6 +345,32 @@ export const fetchYoutubeLiveVideoId = async (channelId: string) => {
     return await fetchLiveVideoIdWithGoogleApis(channelId);
   } catch (error) {
     console.error('Error fetching YouTube live video ID:', error);
+    return null;
+  }
+};
+
+export const fetchYoutubeLiveStatuses = async (channelIds: string[]) => {
+  const uniqueChannelIds = [...new Set(channelIds.filter(Boolean))];
+  if (uniqueChannelIds.length === 0) return [];
+
+  if (await shouldUseBackendResolver()) {
+    try {
+      return await fetchLiveStatusesWithBackend(uniqueChannelIds);
+    } catch (error) {
+      warnAndFallback('live status batch', error);
+    }
+  }
+
+  return [];
+};
+
+export const recordYoutubeLiveVideoId = async (channelId: string, videoId: string) => {
+  if (!(await shouldUseBackendResolver())) return null;
+
+  try {
+    return await recordLiveVideoWithBackend(channelId, videoId);
+  } catch (error) {
+    console.warn(`${BIZEYE_RESOLVE_FLAG_KEY}: failed to record live video observation.`, error);
     return null;
   }
 };

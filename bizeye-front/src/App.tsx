@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { FlagDefinitions, FlagValues } from 'flags/react'
 import './App.css'
 import Header from './components/Header'
@@ -6,6 +6,7 @@ import AddStreamModal from './components/AddStreamModal'
 import HomePage from './pages/HomePage'
 import WatchPage from './pages/WatchPage'
 import { starterStreams } from './data/creators'
+import { fetchYoutubeLiveStatuses } from './services/youtubeResolver'
 import {
   flagDefinitions,
   getBizeyeResolveFlagValue,
@@ -15,6 +16,7 @@ import {
 import {
   loadStoredStreams,
   loadStoredWatchLayout,
+  mergeFixedStreams,
   saveStoredStreams,
   saveStoredWatchLayout,
 } from './storage/preferences'
@@ -28,11 +30,16 @@ const getPageFromHash = (): AppPage => {
 };
 
 function App() {
-  const [activeStreams, setActiveStreams] = useState<Stream[]>(() => loadStoredStreams(starterStreams));
+  const [activeStreams, setActiveStreams] = useState<Stream[]>(() => {
+    const streams = mergeFixedStreams(loadStoredStreams(starterStreams), starterStreams);
+    saveStoredStreams(streams);
+    return streams;
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<AppPage>(getPageFromHash);
   const [bizeyeResolveFlagValue, setBizeyeResolveFlagValue] = useState(getInitialBizeyeResolveFlagValue);
   const [layoutMode, setLayoutMode] = useState<ViewLayoutMode>(() => loadStoredWatchLayout('balanced'));
+  const didRefreshInitialLives = useRef(false);
 
   useEffect(() => {
     const handleHashChange = () => setCurrentPage(getPageFromHash());
@@ -53,12 +60,7 @@ function App() {
     };
   }, []);
 
-  const navigateTo = (page: AppPage) => {
-    window.location.hash = page === 'watch' ? '/watch' : '/';
-    setCurrentPage(page);
-  };
-
-  const updateActiveStreams = (getNextStreams: (streams: Stream[]) => Stream[]) => {
+  const updateActiveStreams = useCallback((getNextStreams: (streams: Stream[]) => Stream[]) => {
     setActiveStreams((previousStreams) => {
       const nextStreams = getNextStreams(previousStreams);
 
@@ -68,6 +70,58 @@ function App() {
 
       return nextStreams;
     });
+  }, []);
+
+  useEffect(() => {
+    if (didRefreshInitialLives.current) return;
+    didRefreshInitialLives.current = true;
+
+    const channelIds = activeStreams
+      .filter((stream) => stream.platform === 'youtube' && stream.id.startsWith('UC'))
+      .map((stream) => stream.id);
+
+    if (channelIds.length === 0) return;
+
+    let isCancelled = false;
+
+    fetchYoutubeLiveStatuses(channelIds).then((statuses) => {
+      if (isCancelled || statuses.length === 0) return;
+
+      updateActiveStreams((streams) => {
+        let hasChanges = false;
+        const byChannelId = new Map(statuses.map((status) => [status.channelId, status]));
+        const nextStreams = streams.map((stream) => {
+          const status = byChannelId.get(stream.id);
+          if (!status || stream.platform !== 'youtube') return stream;
+
+          const nextVideoId = status.status === 'live' && status.videoId ? status.videoId : undefined;
+          const nextTitle = status.title || stream.title;
+
+          if (stream.videoId === nextVideoId && stream.liveStatus === status.status && stream.title === nextTitle) {
+            return stream;
+          }
+
+          hasChanges = true;
+          return {
+            ...stream,
+            liveStatus: status.status,
+            title: nextTitle,
+            videoId: nextVideoId,
+          };
+        });
+
+        return hasChanges ? nextStreams : streams;
+      });
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeStreams, updateActiveStreams]);
+
+  const navigateTo = (page: AppPage) => {
+    window.location.hash = page === 'watch' ? '/watch' : '/';
+    setCurrentPage(page);
   };
 
   const addStream = (id: string, platform: Platform, title?: string) => {
@@ -88,6 +142,29 @@ function App() {
     saveStoredWatchLayout(mode);
   };
 
+  const updateYoutubeLiveVideo = useCallback((channelId: string, videoId: string, title?: string) => {
+    updateActiveStreams((streams) => {
+      let hasChanges = false;
+      const nextStreams = streams.map((stream) => {
+        if (stream.platform !== 'youtube' || stream.id !== channelId) return stream;
+
+        if (stream.videoId === videoId && stream.liveStatus === 'live' && (!title || stream.title === title)) {
+          return stream;
+        }
+
+        hasChanges = true;
+        return {
+          ...stream,
+          liveStatus: 'live' as const,
+          title: title || stream.title,
+          videoId,
+        };
+      });
+
+      return hasChanges ? nextStreams : streams;
+    });
+  }, [updateActiveStreams]);
+
   return (
     <div className={`app-shell app-shell--${currentPage}`}>
       <FlagDefinitions definitions={flagDefinitions} />
@@ -105,6 +182,7 @@ function App() {
           layoutMode={layoutMode}
           onAddStream={() => setIsModalOpen(true)}
           onLayoutModeChange={changeLayoutMode}
+          onLiveVideoResolved={updateYoutubeLiveVideo}
           onRemoveStream={removeStream}
           streams={activeStreams}
         />

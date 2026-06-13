@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { fetchYoutubeLiveVideoId } from '../../services/youtubeResolver';
+import { fetchYoutubeLiveVideoId, recordYoutubeLiveVideoId } from '../../services/youtubeResolver';
 
 type YouTubeVideoData = {
     author?: string;
     title?: string;
+    video_id?: string;
 };
 
 type YouTubePlayerInstance = {
@@ -46,9 +47,12 @@ declare global {
 interface YouTubePlayerProps {
     streamId: string;
     isMuted: boolean;
+    liveStatus?: 'live' | 'offline' | 'unknown' | 'error' | 'quota_limited';
+    videoId?: string;
     setIsMuted: (muted: boolean) => void;
     volume: number;
     setVolume: (volume: number) => void;
+    onLiveVideoResolved: (channelId: string, videoId: string, title?: string) => void;
     onSignalError: () => void;
     onMetadata?: (data: { author: string; title: string }) => void;
 }
@@ -56,9 +60,11 @@ interface YouTubePlayerProps {
 const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     streamId,
     isMuted,
+    videoId,
     setIsMuted,
     volume,
     setVolume,
+    onLiveVideoResolved,
     onSignalError,
     onMetadata
 }) => {
@@ -68,17 +74,37 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     const volumeRef = useRef(volume);
     const onMetadataRef = useRef(onMetadata);
     const onSignalErrorRef = useRef(onSignalError);
+    const onLiveVideoResolvedRef = useRef(onLiveVideoResolved);
+    const reportedVideoIdRef = useRef<string | null>(videoId || null);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
-    const [currentVideoId, setCurrentVideoId] = useState<string | null>(
-        streamId.startsWith('UC') ? null : streamId
-    );
+    const [resolvedVideoId, setResolvedVideoId] = useState<string | null>(streamId.startsWith('UC') ? null : streamId);
+    const currentVideoId = videoId || resolvedVideoId;
 
     useEffect(() => {
         isMutedRef.current = isMuted;
         volumeRef.current = volume;
         onMetadataRef.current = onMetadata;
         onSignalErrorRef.current = onSignalError;
-    }, [isMuted, onMetadata, onSignalError, volume]);
+        onLiveVideoResolvedRef.current = onLiveVideoResolved;
+    }, [isMuted, onLiveVideoResolved, onMetadata, onSignalError, volume]);
+
+    const handleResolvedVideoData = React.useCallback((data?: YouTubeVideoData) => {
+        const resolvedVideoId = data?.video_id;
+        if (!streamId.startsWith('UC') || !resolvedVideoId || resolvedVideoId === 'live_stream') return;
+
+        if (resolvedVideoId !== currentVideoId) {
+            setResolvedVideoId(resolvedVideoId);
+        }
+
+        if (reportedVideoIdRef.current === resolvedVideoId || videoId === resolvedVideoId) {
+            reportedVideoIdRef.current = resolvedVideoId;
+            return;
+        }
+
+        reportedVideoIdRef.current = resolvedVideoId;
+        onLiveVideoResolvedRef.current(streamId, resolvedVideoId, data?.title);
+        void recordYoutubeLiveVideoId(streamId, resolvedVideoId);
+    }, [currentVideoId, streamId, videoId]);
 
     const embedUrl = React.useMemo(() => {
         if (!streamId) return '';
@@ -130,17 +156,21 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                     if (isMutedRef.current) event.target.mute();
                     else event.target.unMute();
 
+                    const data = event.target.getVideoData();
                     const metadataHandler = onMetadataRef.current;
                     if (metadataHandler) {
-                        const data = event.target.getVideoData();
                         if (data?.author) metadataHandler({ author: data.author, title: data.title || '' });
                     }
+                    handleResolvedVideoData(data);
                 },
                 onStateChange: (event: YouTubePlayerEvent) => {
                     const metadataHandler = onMetadataRef.current;
+                    const data = event.target.getVideoData();
                     if (metadataHandler && event.data === youtubeApi.PlayerState.PLAYING) {
-                        const data = event.target.getVideoData();
                         if (data?.author) metadataHandler({ author: data.author, title: data.title || '' });
+                    }
+                    if (event.data === youtubeApi.PlayerState.PLAYING) {
+                        handleResolvedVideoData(data);
                     }
                 },
                 onError: async (event: YouTubePlayerEvent) => {
@@ -152,7 +182,11 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                         const videoId = await fetchYoutubeLiveVideoId(streamId);
                         if (videoId) {
                             console.log(`Fallback search found videoId: ${videoId}`);
-                            setCurrentVideoId(videoId);
+                            setResolvedVideoId(videoId);
+                            if (reportedVideoIdRef.current !== videoId) {
+                                reportedVideoIdRef.current = videoId;
+                                onLiveVideoResolvedRef.current(streamId, videoId);
+                            }
                             return; // Fallback will trigger iframe reload via currentVideoId state
                         }
                     }
@@ -161,7 +195,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 }
             }
         });
-    }, [currentVideoId, streamId]);
+    }, [currentVideoId, handleResolvedVideoData, streamId]);
 
     useEffect(() => {
         let isCancelled = false;

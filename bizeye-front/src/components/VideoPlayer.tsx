@@ -6,11 +6,14 @@ import KickPlayer from './players/KickPlayer';
 
 interface VideoPlayerProps {
     streamId: string;
+    liveStatus?: 'live' | 'offline' | 'unknown' | 'error' | 'quota_limited';
     platform: Platform;
+    videoId?: string;
     isMuted: boolean;
     setIsMuted: (muted: boolean) => void;
     volume: number;
     setVolume: (volume: number) => void;
+    onLiveVideoResolved: (channelId: string, videoId: string, title?: string) => void;
     onSignalError: () => void;
     onMetadata?: (data: { author: string; title: string }) => void;
 }
