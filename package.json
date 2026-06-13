@@ -5,13 +5,20 @@
   "scripts": {
     "dev:front": "npm --prefix bizeye-front run dev -- --host 127.0.0.1",
     "dev:back": "npm --prefix bizeye-back run dev",
+    "dev:back:debug": "npm --prefix bizeye-back run dev:debug",
     "build:front": "npm --prefix bizeye-front run build",
     "build:back": "npm --prefix bizeye-back run build",
     "lint:front": "npm --prefix bizeye-front run lint",
     "typecheck:back": "npm --prefix bizeye-back run typecheck",
+    "dev:db": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-db.ps1",
+    "dev:stack": "docker compose up -d --build db migrate bizeye-back bizeye-front",
+    "dev:stack:debug": "docker compose -f compose.yaml -f compose.debug.yaml up -d --build db migrate bizeye-back bizeye-front",
+    "dev:stack:logs": "docker compose logs -f bizeye-back bizeye-front",
     "docker:up": "docker compose up --build",
+    "docker:debug": "docker compose -f compose.yaml -f compose.debug.yaml up --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "docker:migrate": "docker compose run --rm migrate"
+    "docker:migrate": "docker compose run --rm migrate",
+    "docker:reset": "docker compose down -v"
   }
 }

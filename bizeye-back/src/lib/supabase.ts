@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
-import { requireServerEnv } from '../config/env.js';
+import { requireSupabaseEnv } from '../config/env.js';
 
 export const createSupabaseAdminClient = () => {
-  const env = requireServerEnv();
+  const env = requireSupabaseEnv();
 
   return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: {

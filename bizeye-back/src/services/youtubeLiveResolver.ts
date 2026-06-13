@@ -1,24 +1,16 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { createSupabaseAdminClient } from '../lib/supabase.js';
+import {
+  createLiveResolutionStore,
+  type LiveResolutionRow,
+  type LiveResolutionPayload,
+  type LiveResolutionSource,
+  type LiveResolutionStatus,
+  type LiveResolutionStore,
+} from './liveResolutionStore.js';
 import { fetchYouTubeJson } from './youtube.js';
 
 const LIVE_CACHE_TTL_MS = 60 * 1000;
 const OFFLINE_CACHE_TTL_MS = 10 * 60 * 1000;
 const ERROR_BACKOFF_MS = 5 * 60 * 1000;
-
-export type LiveResolutionStatus = 'live' | 'offline' | 'unknown' | 'quota_limited' | 'error';
-export type LiveResolutionSource = 'cache' | 'youtube' | 'stale_cache' | 'unknown';
-
-type LiveResolutionRow = {
-  channel_id: string;
-  video_id: string | null;
-  status: LiveResolutionStatus;
-  source: LiveResolutionSource;
-  checked_at: string | null;
-  expires_at: string | null;
-  next_discovery_at: string | null;
-  last_error: string | null;
-};
 
 type YouTubeLiveSearchResponse = {
   items?: Array<{
@@ -83,35 +75,8 @@ const toResolution = (row: LiveResolutionRow, source: LiveResolutionSource = 'ca
   videoId: row.video_id,
 });
 
-const ensureChannel = async (client: SupabaseClient, channelId: string, title?: string) => {
-  const payload: Record<string, string> = { channel_id: channelId };
-  if (title) payload.title = title;
-
-  const { error } = await client.from('youtube_channels').upsert(payload, {
-    onConflict: 'channel_id',
-  });
-
-  if (error) {
-    throw new Error(`Failed to cache YouTube channel ${channelId}: ${error.message}`);
-  }
-};
-
-const readCachedResolution = async (client: SupabaseClient, channelId: string) => {
-  const { data, error } = await client
-    .from('youtube_live_resolutions')
-    .select('channel_id, video_id, status, source, checked_at, expires_at, next_discovery_at, last_error')
-    .eq('channel_id', channelId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Failed to read live cache for ${channelId}: ${error.message}`);
-  }
-
-  return data as LiveResolutionRow | null;
-};
-
 const writeResolution = async (
-  client: SupabaseClient,
+  store: LiveResolutionStore,
   resolution: {
     channelId: string;
     error?: string | null;
@@ -125,9 +90,9 @@ const writeResolution = async (
   const ttl = resolution.status === 'live' ? LIVE_CACHE_TTL_MS : OFFLINE_CACHE_TTL_MS;
   const expiresAt = addMilliseconds(resolution.status === 'error' ? ERROR_BACKOFF_MS : ttl);
 
-  await ensureChannel(client, resolution.channelId, resolution.title);
+  await store.ensureChannel(resolution.channelId, resolution.title);
 
-  const payload: Record<string, unknown> = {
+  const payload: LiveResolutionPayload = {
     channel_id: resolution.channelId,
     checked_at: checkedAt,
     expires_at: expiresAt,
@@ -147,13 +112,7 @@ const writeResolution = async (
     payload.failure_count = 1;
   }
 
-  const { error } = await client.from('youtube_live_resolutions').upsert(payload, {
-    onConflict: 'channel_id',
-  });
-
-  if (error) {
-    throw new Error(`Failed to cache live resolution for ${resolution.channelId}: ${error.message}`);
-  }
+  await store.upsertResolution(payload);
 
   return {
     channelId: resolution.channelId,
@@ -166,7 +125,7 @@ const writeResolution = async (
   } satisfies YouTubeLiveResolution;
 };
 
-const validateCachedVideo = async (client: SupabaseClient, channelId: string, videoId: string) => {
+const validateCachedVideo = async (store: LiveResolutionStore, channelId: string, videoId: string) => {
   const data = await fetchYouTubeJson<YouTubeVideosResponse>({
     path: '/videos',
     params: {
@@ -182,7 +141,7 @@ const validateCachedVideo = async (client: SupabaseClient, channelId: string, vi
     !video.liveStreamingDetails?.actualEndTime;
 
   if (!video || !isLive) {
-    return writeResolution(client, {
+    return writeResolution(store, {
       channelId,
       source: 'youtube',
       status: 'offline',
@@ -190,7 +149,7 @@ const validateCachedVideo = async (client: SupabaseClient, channelId: string, vi
     });
   }
 
-  const resolution = await writeResolution(client, {
+  const resolution = await writeResolution(store, {
     channelId,
     source: 'youtube',
     status: 'live',
@@ -204,7 +163,7 @@ const validateCachedVideo = async (client: SupabaseClient, channelId: string, vi
   };
 };
 
-const discoverLiveVideo = async (client: SupabaseClient, channelId: string) => {
+const discoverLiveVideo = async (store: LiveResolutionStore, channelId: string) => {
   const data = await fetchYouTubeJson<YouTubeLiveSearchResponse>({
     path: '/search',
     params: {
@@ -220,7 +179,7 @@ const discoverLiveVideo = async (client: SupabaseClient, channelId: string) => {
   const videoId = item?.id?.videoId;
 
   if (!videoId) {
-    return writeResolution(client, {
+    return writeResolution(store, {
       channelId,
       source: 'youtube',
       status: 'offline',
@@ -228,7 +187,7 @@ const discoverLiveVideo = async (client: SupabaseClient, channelId: string) => {
     });
   }
 
-  return writeResolution(client, {
+  return writeResolution(store, {
     channelId,
     source: 'youtube',
     status: 'live',
@@ -245,10 +204,10 @@ export const resolveLiveForChannel = async (
     throw new Error(`Invalid YouTube channel ID: ${channelId}`);
   }
 
-  const client = createSupabaseAdminClient();
-  await ensureChannel(client, channelId);
+  const store = createLiveResolutionStore();
+  await store.ensureChannel(channelId);
 
-  const cached = await readCachedResolution(client, channelId);
+  const cached = await store.readCachedResolution(channelId);
 
   if (cached?.status === 'live' && cached.video_id && isFresh(cached.expires_at)) {
     return toResolution(cached);
@@ -259,7 +218,7 @@ export const resolveLiveForChannel = async (
   }
 
   if (cached?.status === 'live' && cached.video_id) {
-    const validation = await validateCachedVideo(client, channelId, cached.video_id);
+    const validation = await validateCachedVideo(store, channelId, cached.video_id);
     if (validation.status === 'live' || !allowDiscovery) return validation;
   }
 
@@ -276,7 +235,7 @@ export const resolveLiveForChannel = async (
         };
   }
 
-  return discoverLiveVideo(client, channelId);
+  return discoverLiveVideo(store, channelId);
 };
 
 export const resolveLiveStatuses = async (channelIds: string[]) => {
@@ -306,9 +265,9 @@ export const recordObservedLiveVideo = async (channelId: string, videoId: string
     throw new Error(`Invalid YouTube video ID: ${videoId}`);
   }
 
-  const client = createSupabaseAdminClient();
+  const store = createLiveResolutionStore();
 
-  return writeResolution(client, {
+  return writeResolution(store, {
     channelId,
     source: 'youtube',
     status: 'live',

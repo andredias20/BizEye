@@ -1,0 +1,46 @@
+services:
+  bizeye-back:
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        ensure_deps() {
+          checksum="$$(cat package.json package-lock.json | sha256sum | cut -d ' ' -f 1)"
+          current="$$(cat node_modules/.bizeye-deps-hash 2>/dev/null || true)"
+          if [ "$$checksum" != "$$current" ]; then
+            echo "Installing backend dependencies because package files changed..."
+            npm ci
+            echo "$$checksum" > node_modules/.bizeye-deps-hash
+          fi
+        }
+
+        ensure_deps
+
+        attempts=0
+        until pg_isready -h "$$PGHOST" -U "$$PGUSER" -d "$$PGDATABASE"; do
+          attempts=$$((attempts + 1))
+          if [ "$$attempts" -ge 30 ]; then
+            echo "Postgres did not become ready in time."
+            exit 1
+          fi
+          echo "Waiting for Postgres before starting backend debug server..."
+          sleep 2
+        done
+
+        attempts=0
+        until psql -tAc "select to_regclass('public.youtube_live_resolutions') is not null" | grep -q t; do
+          attempts=$$((attempts + 1))
+          if [ "$$attempts" -ge 30 ]; then
+            echo "Migrations did not finish in time."
+            exit 1
+          fi
+          echo "Waiting for migrations before starting backend debug server..."
+          sleep 2
+        done
+
+        npm run dev:debug:docker
+    environment:
+      NODE_OPTIONS: --enable-source-maps
+    ports:
+      - "9229:9229"
