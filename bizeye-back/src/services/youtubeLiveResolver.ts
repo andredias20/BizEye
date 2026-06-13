@@ -9,8 +9,9 @@ import {
 import { fetchYouTubeJson } from './youtube.js';
 
 const LIVE_CACHE_TTL_MS = 60 * 1000;
-const OFFLINE_CACHE_TTL_MS = 10 * 60 * 1000;
+const OFFLINE_CACHE_TTL_MS = 60 * 1000;
 const ERROR_BACKOFF_MS = 5 * 60 * 1000;
+const YOUTUBE_WEB_BASE_URL = 'https://www.youtube.com';
 
 type YouTubeLiveSearchResponse = {
   items?: Array<{
@@ -64,6 +65,10 @@ const nowIso = () => new Date().toISOString();
 
 const isFresh = (expiresAt: string | null) => {
   return Boolean(expiresAt && Date.parse(expiresAt) > Date.now());
+};
+
+const isRecent = (checkedAt: string | null, ttlMs: number) => {
+  return Boolean(checkedAt && Date.parse(checkedAt) + ttlMs > Date.now());
 };
 
 const toResolution = (row: LiveResolutionRow, source: LiveResolutionSource = 'cache'): YouTubeLiveResolution => ({
@@ -163,6 +168,36 @@ const validateCachedVideo = async (store: LiveResolutionStore, channelId: string
   };
 };
 
+const extractLivePageVideoId = (html: string) => {
+  const canonicalVideoId = html.match(
+    /<link\s+rel="canonical"\s+href="https:\/\/www\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})"/,
+  )?.[1];
+
+  if (canonicalVideoId && html.includes('"isLiveContent":true')) {
+    return canonicalVideoId;
+  }
+
+  const videoDetailsMatch = html.match(
+    /"videoDetails":\{.*?"videoId":"([a-zA-Z0-9_-]{11})".*?"isLiveContent":true/s,
+  );
+
+  return videoDetailsMatch?.[1] ?? null;
+};
+
+const discoverLiveVideoFromLivePage = async (channelId: string) => {
+  const response = await fetch(`${YOUTUBE_WEB_BASE_URL}/channel/${channelId}/live`, {
+    headers: {
+      'accept-language': 'pt-BR,pt;q=0.9,en;q=0.8',
+      'user-agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+    },
+  });
+
+  if (!response.ok) return null;
+
+  return extractLivePageVideoId(await response.text());
+};
+
 const discoverLiveVideo = async (store: LiveResolutionStore, channelId: string) => {
   const data = await fetchYouTubeJson<YouTubeLiveSearchResponse>({
     path: '/search',
@@ -179,6 +214,11 @@ const discoverLiveVideo = async (store: LiveResolutionStore, channelId: string) 
   const videoId = item?.id?.videoId;
 
   if (!videoId) {
+    const livePageVideoId = await discoverLiveVideoFromLivePage(channelId).catch(() => null);
+    if (livePageVideoId) {
+      return validateCachedVideo(store, channelId, livePageVideoId);
+    }
+
     return writeResolution(store, {
       channelId,
       source: 'youtube',
@@ -213,7 +253,7 @@ export const resolveLiveForChannel = async (
     return toResolution(cached);
   }
 
-  if (cached?.status === 'offline' && isFresh(cached.expires_at)) {
+  if (cached?.status === 'offline' && isFresh(cached.expires_at) && isRecent(cached.checked_at, OFFLINE_CACHE_TTL_MS)) {
     return toResolution(cached);
   }
 
