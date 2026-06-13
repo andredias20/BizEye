@@ -74,13 +74,25 @@ const getYoutubePlaybackQuality = (quality: StreamQuality) => {
     return quality === 'auto' ? undefined : YOUTUBE_QUALITY_MAP[quality];
 };
 
+const isYoutubeChannelId = (value: string) => /^UC[a-zA-Z0-9_-]{22}$/.test(value);
+
 const fetchYoutubeLiveVideoId = async (channelId: string): Promise<string | null> => {
     if (!YOUTUBE_API_KEY) return null;
     try {
-        const response = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&type=video&eventType=live&key=${YOUTUBE_API_KEY}`
-        );
-        if (!response.ok) return null;
+        const params = new URLSearchParams({
+            part: 'snippet',
+            channelId,
+            type: 'video',
+            eventType: 'live',
+            maxResults: '1',
+            key: YOUTUBE_API_KEY
+        });
+
+        const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${params.toString()}`);
+        if (!response.ok) {
+            console.warn(`YouTube live search failed for ${channelId}:`, response.status);
+            return null;
+        }
         const data = await response.json() as YouTubeLiveSearchResponse;
         return data.items?.[0]?.id?.videoId || null;
     } catch (error) {
@@ -107,9 +119,14 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     const onMetadataRef = useRef(onMetadata);
     const onSignalErrorRef = useRef(onSignalError);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
+    const isChannelStream = isYoutubeChannelId(streamId);
+    const shouldResolveLiveWithApi = isChannelStream && Boolean(YOUTUBE_API_KEY);
     const [currentVideoId, setCurrentVideoId] = useState<string | null>(
-        streamId.startsWith('UC') ? null : streamId
+        isYoutubeChannelId(streamId) ? null : streamId
     );
+    const [resolvedLiveVideoId, setResolvedLiveVideoId] = useState<string | null>(null);
+    const [shouldUseChannelFallback, setShouldUseChannelFallback] = useState(false);
+    const effectiveVideoId = currentVideoId || resolvedLiveVideoId;
     const playbackQuality = getYoutubePlaybackQuality(streamQuality);
 
     useEffect(() => {
@@ -119,14 +136,38 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         onSignalErrorRef.current = onSignalError;
     }, [isMuted, onMetadata, onSignalError, volume]);
 
+    useEffect(() => {
+        let isCancelled = false;
+
+        if (!shouldResolveLiveWithApi) return;
+
+        fetchYoutubeLiveVideoId(streamId).then((videoId) => {
+            if (isCancelled) return;
+
+            if (videoId) {
+                setResolvedLiveVideoId(videoId);
+                setShouldUseChannelFallback(false);
+            } else {
+                setShouldUseChannelFallback(true);
+            }
+        });
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [shouldResolveLiveWithApi, streamId]);
+
     const embedUrl = React.useMemo(() => {
         if (!streamId) return '';
         const origin = window.location.origin;
 
+        const isWaitingForLiveResolution = shouldResolveLiveWithApi && !effectiveVideoId && !shouldUseChannelFallback;
+        if (isWaitingForLiveResolution) return '';
+
         let baseUrl = '';
-        if (currentVideoId) {
-            baseUrl = `https://www.youtube.com/embed/${currentVideoId}`;
-        } else if (streamId.startsWith('UC')) {
+        if (effectiveVideoId) {
+            baseUrl = `https://www.youtube.com/embed/${effectiveVideoId}`;
+        } else if (isChannelStream) {
             baseUrl = `https://www.youtube.com/embed/live_stream?channel=${streamId}`;
         } else {
             baseUrl = `https://www.youtube.com/embed/${streamId}`;
@@ -147,7 +188,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         }
 
         return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${params.toString()}`;
-    }, [streamId, currentVideoId, playbackQuality]);
+    }, [streamId, effectiveVideoId, isChannelStream, playbackQuality, shouldResolveLiveWithApi, shouldUseChannelFallback]);
 
     const createYoutubeIframe = React.useCallback(() => {
         if (!containerRef.current || !embedUrl) return null;
@@ -211,12 +252,13 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                     console.warn(`YouTube player error for ${streamId}:`, event.data);
 
                     // Attempt fallback if using channel ID and not already using a direct videoId
-                    if (streamId.startsWith('UC') && !currentVideoId) {
+                    if (isChannelStream && !effectiveVideoId) {
                         console.log(`Attempting fallback search for channel ${streamId}`);
                         const videoId = await fetchYoutubeLiveVideoId(streamId);
                         if (videoId) {
                             console.log(`Fallback search found videoId: ${videoId}`);
                             setCurrentVideoId(videoId);
+                            setShouldUseChannelFallback(false);
                             return; // Fallback will trigger iframe reload via currentVideoId state
                         }
                     }
@@ -225,7 +267,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 }
             }
         });
-    }, [currentVideoId, playbackQuality, streamId]);
+    }, [effectiveVideoId, isChannelStream, playbackQuality, streamId]);
 
     useEffect(() => {
         if (isPlayerReady && playerRef.current && playbackQuality) {

@@ -41,6 +41,32 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
 
     if (!isOpen) return null;
 
+    const fetchYoutubeChannelById = async (channelId: string) => {
+        if (!YOUTUBE_API_KEY) return null;
+
+        try {
+            const params = new URLSearchParams({
+                part: 'id,snippet',
+                id: channelId,
+                key: YOUTUBE_API_KEY
+            });
+            const response = await fetch(`https://www.googleapis.com/youtube/v3/channels?${params.toString()}`);
+            if (!response.ok) return null;
+
+            const data = await response.json() as YoutubeChannelListResponse;
+            const channel = data.items?.[0];
+            if (!channel?.id) return null;
+
+            return {
+                id: channel.id,
+                title: channel.snippet?.title || channel.id
+            };
+        } catch (err) {
+            console.error('YouTube channel lookup failed:', err);
+            return null;
+        }
+    };
+
     const resolveYoutubeId = async (input: string): Promise<{ id: string; title: string }> => {
         const cleanInput = input.trim();
 
@@ -61,7 +87,11 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
 
         // 2. Try to find a UC ID directly (regex)
         const ucMatch = cleanInput.match(/UC[a-zA-Z0-9_-]{22}/);
-        if (ucMatch) return { id: ucMatch[0], title: ucMatch[0] };
+        if (ucMatch) {
+            const channelId = ucMatch[0];
+            const channel = await fetchYoutubeChannelById(channelId);
+            return { id: channelId, title: channel?.title || channelId };
+        }
 
         // 3. Identify Handle or Channel Name
         let handle = '';
