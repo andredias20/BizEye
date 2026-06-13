@@ -38,6 +38,15 @@ const mockChannels: MockChannel[] = [
     title: 'EEBrasil',
     videoId: 'eebrasil001',
   },
+  {
+    channelId: 'UCZiYbVptd3PVPf4f6eR6UaQ',
+    description: 'Canal CazeTV usado como fixture local do BizEye.',
+    handle: '@CazeTV',
+    liveTitle: 'CazeTV - live fixture local',
+    thumbnail: 'https://i.ytimg.com/vi/cazetv00001/mqdefault.jpg',
+    title: 'CazeTV',
+    videoId: 'cazetv00001',
+  },
 ];
 
 const normalizeQuery = (value: unknown) => String(value ?? '').trim().toLowerCase();
