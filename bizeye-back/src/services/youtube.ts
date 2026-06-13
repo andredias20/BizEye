@@ -1,4 +1,4 @@
-import { requireServerEnv } from '../config/env';
+import { requireServerEnv } from '../config/env.js';
 
 const YOUTUBE_API_BASE_URL = 'https://www.googleapis.com/youtube/v3';
 

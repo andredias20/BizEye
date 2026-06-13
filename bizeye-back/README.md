@@ -16,7 +16,12 @@ The backend removes the frontend dependency on `VITE_YOUTUBE_API_KEY`, centraliz
 
 - Root Directory: `bizeye-back`
 - Install Command: `npm ci`
-- Build Command: none, Hono is detected from `src/index.ts`
+- Build Command: none
+- Serverless entrypoint: `api/index.ts`
+
+## Cron
+
+`vercel.json` uses a daily cron schedule because Vercel Hobby projects do not allow cron jobs more frequent than once per day. The intended live validation cadence is 10 minutes, but that requires either Vercel Pro or an external scheduler calling `GET /internal/cron/live-check` with the `CRON_SECRET` bearer token.
 
 ## Supabase Project
 

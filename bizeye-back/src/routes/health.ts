@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { getConfigStatus } from '../config/env';
+import { getConfigStatus } from '../config/env.js';
 
 export const healthRoutes = new Hono();
 

@@ -3,10 +3,10 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { requestId } from 'hono/request-id';
 import { secureHeaders } from 'hono/secure-headers';
-import { getOptionalServerEnv } from './config/env';
-import { healthRoutes } from './routes/health';
-import { internalRoutes } from './routes/internal';
-import { youtubeRoutes } from './routes/youtube';
+import { getOptionalServerEnv } from './config/env.js';
+import { healthRoutes } from './routes/health.js';
+import { internalRoutes } from './routes/internal.js';
+import { youtubeRoutes } from './routes/youtube.js';
 
 const parseAllowedOrigins = (value: string) => {
   return value

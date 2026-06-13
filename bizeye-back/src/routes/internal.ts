@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { getOptionalServerEnv } from '../config/env';
+import { getOptionalServerEnv } from '../config/env.js';
 
 export const internalRoutes = new Hono();
 
