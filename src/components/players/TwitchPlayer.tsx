@@ -1,8 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
+import type { StreamQuality } from '../../types';
+
+type TwitchQuality = {
+    group?: string;
+    name?: string;
+};
 
 type TwitchPlayerInstance = {
     addEventListener: (eventName: string, callback: () => void) => void;
+    getQualities?: () => TwitchQuality[];
     play: () => void;
+    setQuality?: (quality: string) => void;
     setMuted: (muted: boolean) => void;
     setVolume: (volume: number) => void;
 };
@@ -27,6 +35,7 @@ interface TwitchPlayerProps {
     setIsMuted: (muted: boolean) => void;
     volume: number;
     setVolume: (volume: number) => void;
+    streamQuality: StreamQuality;
     onSignalError: () => void;
 }
 
@@ -38,26 +47,59 @@ declare global {
     }
 }
 
+const getTwitchQualityCandidates = (quality: StreamQuality) => {
+    switch (quality) {
+        case 'auto':
+            return ['auto'];
+        case '1080p':
+            return ['1080p60', '1080p', 'chunked'];
+        case '720p':
+            return ['720p60', '720p'];
+        case '480p':
+            return ['480p60', '480p30', '480p'];
+    }
+};
+
+const applyTwitchQuality = (player: TwitchPlayerInstance, quality: StreamQuality) => {
+    if (!player.setQuality) return;
+
+    try {
+        const candidates = getTwitchQualityCandidates(quality);
+        const availableQualities = player.getQualities?.() ?? [];
+        const availableNames = new Set(
+            availableQualities.flatMap((item) => [item.group, item.name]).filter(Boolean)
+        );
+        const selectedQuality = candidates.find((candidate) => availableNames.has(candidate)) ?? candidates[0];
+
+        player.setQuality(selectedQuality);
+    } catch (e) {
+        console.warn("Twitch setQuality error:", e);
+    }
+};
+
 const TwitchPlayer: React.FC<TwitchPlayerProps> = ({
     streamId,
     isMuted,
     setIsMuted,
     volume,
     setVolume,
+    streamQuality,
     onSignalError
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const playerRef = useRef<TwitchPlayerInstance | null>(null);
     const isMutedRef = useRef(isMuted);
     const volumeRef = useRef(volume);
+    const streamQualityRef = useRef(streamQuality);
     const onSignalErrorRef = useRef(onSignalError);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
 
     useEffect(() => {
         isMutedRef.current = isMuted;
         volumeRef.current = volume;
+        streamQualityRef.current = streamQuality;
         onSignalErrorRef.current = onSignalError;
-    }, [isMuted, onSignalError, volume]);
+    }, [isMuted, onSignalError, streamQuality, volume]);
 
     const initTwitchPlayer = React.useCallback(() => {
         if (!containerRef.current || !window.Twitch?.Player || playerRef.current) return;
@@ -78,6 +120,7 @@ const TwitchPlayer: React.FC<TwitchPlayerProps> = ({
             setIsPlayerReady(true);
             player.setVolume(volumeRef.current / 100);
             player.setMuted(isMutedRef.current);
+            applyTwitchQuality(player, streamQualityRef.current);
 
             // Explicitly call play to handle some browser autoplay restrictions if muted
             try {
@@ -149,6 +192,12 @@ const TwitchPlayer: React.FC<TwitchPlayerProps> = ({
             }
         }
     }, [isMuted, volume, isPlayerReady]);
+
+    useEffect(() => {
+        if (isPlayerReady && playerRef.current) {
+            applyTwitchQuality(playerRef.current, streamQuality);
+        }
+    }, [isPlayerReady, streamQuality]);
 
     return (
         <div className="player-container twitch-player" style={{ width: '100%', height: '100%', position: 'relative', background: '#000' }}>

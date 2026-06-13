@@ -1,5 +1,9 @@
 export type Platform = 'youtube' | 'twitch' | 'kick';
 
+export const STREAM_QUALITY_OPTIONS = ['auto', '1080p', '720p', '480p'] as const;
+
+export type StreamQuality = (typeof STREAM_QUALITY_OPTIONS)[number];
+
 export type ViewLayoutMode =
     | 'balanced'
     | 'max-horizontal'

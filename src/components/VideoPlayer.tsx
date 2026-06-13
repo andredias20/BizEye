@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Platform } from '../types';
+import type { Platform, StreamQuality } from '../types';
 import YouTubePlayer from './players/YouTubePlayer';
 import TwitchPlayer from './players/TwitchPlayer';
 import KickPlayer from './players/KickPlayer';
@@ -11,6 +11,7 @@ interface VideoPlayerProps {
     setIsMuted: (muted: boolean) => void;
     volume: number;
     setVolume: (volume: number) => void;
+    streamQuality: StreamQuality;
     onSignalError: () => void;
     onMetadata?: (data: { author: string; title: string }) => void;
 }

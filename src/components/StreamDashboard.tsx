@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './StreamDashboard.css';
 import StreamCard from './StreamCard';
 
-import type { Stream, ViewLayoutMode } from '../types';
+import type { Stream, StreamQuality, ViewLayoutMode } from '../types';
 
 interface StreamDashboardProps {
     layoutMode: ViewLayoutMode;
     streams: Stream[];
+    streamQuality: StreamQuality;
     onRemoveStream: (id: string, platform: Stream['platform']) => void;
 }
 
@@ -148,7 +149,7 @@ const computeLayout = (count: number, bounds: GridBounds, mode: ViewLayoutMode):
     return [...fitCandidates].sort((a, b) => b.area - a.area || Math.abs(a.cols - a.rows) - Math.abs(b.cols - b.rows))[0] || best;
 };
 
-const StreamDashboard: React.FC<StreamDashboardProps> = ({ streams, layoutMode, onRemoveStream }) => {
+const StreamDashboard: React.FC<StreamDashboardProps> = ({ streams, layoutMode, streamQuality, onRemoveStream }) => {
     const dashboardRef = useRef<HTMLElement | null>(null);
     const [bounds, setBounds] = useState<GridBounds>({ height: 0, width: 0 });
 
@@ -208,6 +209,7 @@ const StreamDashboard: React.FC<StreamDashboardProps> = ({ streams, layoutMode, 
                         streamId={stream.id}
                         platform={stream.platform}
                         title={stream.title}
+                        streamQuality={streamQuality}
                         onRemove={() => onRemoveStream(stream.id, stream.platform)}
                     />
                 ))

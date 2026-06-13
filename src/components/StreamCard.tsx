@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import './StreamCard.css';
 import VideoPlayer from './VideoPlayer';
+import type { Platform, StreamQuality } from '../types';
 
 interface StreamCardProps {
     streamId: string;
-    platform: 'youtube' | 'twitch' | 'kick';
+    platform: Platform;
     title?: string;
+    streamQuality: StreamQuality;
     onRemove: () => void;
 }
 
-const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, title, onRemove }) => {
+const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, title, streamQuality, onRemove }) => {
     const [isMuted, setIsMuted] = useState(true);
     const [volume, setVolume] = useState(50);
     const [hasSignal, setHasSignal] = useState(true);
@@ -73,6 +75,7 @@ const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, title, onRe
                     setIsMuted={setIsMuted}
                     volume={volume}
                     setVolume={setVolume}
+                    streamQuality={streamQuality}
                     onSignalError={() => setHasSignal(false)}
                     onMetadata={(data: { author: string }) => {
                         // Only update if we don't have a specific title from the modal/hardcoded state

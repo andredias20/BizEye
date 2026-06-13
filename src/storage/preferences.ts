@@ -1,7 +1,9 @@
-import type { Platform, Stream, ViewLayoutMode } from '../types';
+import { STREAM_QUALITY_OPTIONS } from '../types';
+import type { Platform, Stream, StreamQuality, ViewLayoutMode } from '../types';
 
 const STREAMS_STORAGE_KEY = 'bizeye.streams.v1';
 const WATCH_LAYOUT_STORAGE_KEY = 'bizeye.watchLayout.v1';
+const STREAM_QUALITY_STORAGE_KEY = 'bizeye.streamQuality.v1';
 
 const platforms: Platform[] = ['youtube', 'twitch', 'kick'];
 const layoutModes: ViewLayoutMode[] = ['balanced', 'max-horizontal', 'max-vertical', 'width-guided', 'height-guided'];
@@ -90,5 +92,29 @@ export const saveStoredWatchLayout = (layoutMode: ViewLayoutMode) => {
         window.localStorage.setItem(WATCH_LAYOUT_STORAGE_KEY, layoutMode);
     } catch (error) {
         console.warn('Could not save BizEye watch layout to localStorage:', error);
+    }
+};
+
+export const loadStoredStreamQuality = (fallback: StreamQuality) => {
+    if (!canUseLocalStorage()) return fallback;
+
+    try {
+        const rawQuality = window.localStorage.getItem(STREAM_QUALITY_STORAGE_KEY);
+        return STREAM_QUALITY_OPTIONS.includes(rawQuality as StreamQuality)
+            ? rawQuality as StreamQuality
+            : fallback;
+    } catch (error) {
+        console.warn('Could not load BizEye stream quality from localStorage:', error);
+        return fallback;
+    }
+};
+
+export const saveStoredStreamQuality = (streamQuality: StreamQuality) => {
+    if (!canUseLocalStorage()) return;
+
+    try {
+        window.localStorage.setItem(STREAM_QUALITY_STORAGE_KEY, streamQuality);
+    } catch (error) {
+        console.warn('Could not save BizEye stream quality to localStorage:', error);
     }
 };

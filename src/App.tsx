@@ -6,13 +6,15 @@ import HomePage from './pages/HomePage'
 import WatchPage from './pages/WatchPage'
 import { starterStreams } from './data/creators'
 import {
+  loadStoredStreamQuality,
   loadStoredStreams,
   loadStoredWatchLayout,
+  saveStoredStreamQuality,
   saveStoredStreams,
   saveStoredWatchLayout,
 } from './storage/preferences'
 
-import type { Platform, Stream, ViewLayoutMode } from './types'
+import type { Platform, Stream, StreamQuality, ViewLayoutMode } from './types'
 
 type AppPage = 'home' | 'watch';
 
@@ -25,6 +27,7 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<AppPage>(getPageFromHash);
   const [layoutMode, setLayoutMode] = useState<ViewLayoutMode>(() => loadStoredWatchLayout('balanced'));
+  const [streamQuality, setStreamQuality] = useState<StreamQuality>(() => loadStoredStreamQuality('auto'));
 
   useEffect(() => {
     const handleHashChange = () => setCurrentPage(getPageFromHash());
@@ -68,6 +71,11 @@ function App() {
     saveStoredWatchLayout(mode);
   };
 
+  const changeStreamQuality = (quality: StreamQuality) => {
+    setStreamQuality(quality);
+    saveStoredStreamQuality(quality);
+  };
+
   return (
     <div className={`app-shell app-shell--${currentPage}`}>
       <Header
@@ -83,6 +91,8 @@ function App() {
           onAddStream={() => setIsModalOpen(true)}
           onLayoutModeChange={changeLayoutMode}
           onRemoveStream={removeStream}
+          onStreamQualityChange={changeStreamQuality}
+          streamQuality={streamQuality}
           streams={activeStreams}
         />
       ) : (
