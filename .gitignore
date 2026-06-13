@@ -15,12 +15,8 @@ dist-ssr
 .env.*
 !.env.example
 
-# Shared Codex local environment for worktree setup/actions.
-!.codex/
-!.codex/environments/
-!.codex/environments/environment.toml
-!.codex/setup-worktree.ps1
-!.codex/start-dev.ps1
+# Local Codex workspace files.
+.codex/
 
 # Editor directories and files
 .vscode/*
