@@ -6,6 +6,10 @@ const requiredServerEnvSchema = z.object({
   YOUTUBE_API_KEY: z.string().min(1),
 });
 
+const youtubeEnvSchema = z.object({
+  YOUTUBE_API_KEY: z.string().min(1),
+});
+
 const optionalServerEnvSchema = z.object({
   BIZEYE_FRONTEND_ORIGIN: z.string().default('http://localhost:5173'),
   SESSION_COOKIE_NAME: z.string().default('bizeye_admin_session'),
@@ -13,10 +17,13 @@ const optionalServerEnvSchema = z.object({
 });
 
 export type RequiredServerEnv = z.infer<typeof requiredServerEnvSchema>;
+export type YouTubeEnv = z.infer<typeof youtubeEnvSchema>;
 
 export const getOptionalServerEnv = () => optionalServerEnvSchema.parse(process.env);
 
 export const requireServerEnv = (): RequiredServerEnv => requiredServerEnvSchema.parse(process.env);
+
+export const requireYouTubeEnv = (): YouTubeEnv => youtubeEnvSchema.parse(process.env);
 
 export const getConfigStatus = () => {
   const parsed = requiredServerEnvSchema.safeParse(process.env);

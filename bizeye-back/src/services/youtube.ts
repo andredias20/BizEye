@@ -1,4 +1,4 @@
-import { requireServerEnv } from '../config/env.js';
+import { requireYouTubeEnv } from '../config/env.js';
 
 const YOUTUBE_API_BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
@@ -20,7 +20,7 @@ export const buildYouTubeUrl = ({ path, params }: YouTubeRequestOptions) => {
 };
 
 export const fetchYouTubeJson = async <T>(options: YouTubeRequestOptions): Promise<T> => {
-  const env = requireServerEnv();
+  const env = requireYouTubeEnv();
   const response = await fetch(buildYouTubeUrl(options), {
     headers: {
       'x-goog-api-key': env.YOUTUBE_API_KEY,

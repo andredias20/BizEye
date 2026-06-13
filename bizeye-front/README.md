@@ -16,6 +16,15 @@ npm run dev -- --host 127.0.0.1
 
 Vite prints the local URL in the terminal. If another worktree is already using port `5173`, Vite will choose the next available port.
 
+## Feature Flags
+
+The frontend reads the Vercel boolean flag `bizeye-resolve` through the serverless endpoint `api/flags.ts`.
+
+- `bizeye-resolve=true`: YouTube channel search, channel resolution, and live lookup use `VITE_RESOLVER_BASE_URL`.
+- `bizeye-resolve=false`: those flows fall back to direct Google APIs through `VITE_YOUTUBE_API_KEY`.
+- Local Vite dev uses `VITE_FEATURE_BIZEYE_RESOLVE` as the fallback value because Vite does not run Vercel Functions.
+- For local testing, override the value in the browser with `localStorage.setItem('bizeye-resolve', 'true')` or remove the key to use the environment/default value again.
+
 ## Codex Worktrees
 
 This repo includes a Codex local environment at:

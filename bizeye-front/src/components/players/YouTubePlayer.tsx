@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { fetchYoutubeLiveVideoId } from '../../services/youtubeResolver';
 
 type YouTubeVideoData = {
     author?: string;
@@ -30,14 +31,6 @@ type YouTubePlayerConstructor = {
     }): YouTubePlayerInstance;
 };
 
-type YouTubeLiveSearchResponse = {
-    items?: Array<{
-        id?: {
-            videoId?: string;
-        };
-    }>;
-};
-
 declare global {
     interface Window {
         onYouTubeIframeAPIReady?: () => void;
@@ -59,23 +52,6 @@ interface YouTubePlayerProps {
     onSignalError: () => void;
     onMetadata?: (data: { author: string; title: string }) => void;
 }
-
-const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY || '';
-
-const fetchYoutubeLiveVideoId = async (channelId: string): Promise<string | null> => {
-    if (!YOUTUBE_API_KEY) return null;
-    try {
-        const response = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&type=video&eventType=live&key=${YOUTUBE_API_KEY}`
-        );
-        if (!response.ok) return null;
-        const data = await response.json() as YouTubeLiveSearchResponse;
-        return data.items?.[0]?.id?.videoId || null;
-    } catch (error) {
-        console.error('Error fetching YouTube live video ID:', error);
-        return null;
-    }
-};
 
 const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     streamId,

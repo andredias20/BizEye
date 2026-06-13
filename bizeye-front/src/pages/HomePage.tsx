@@ -1,32 +1,12 @@
 import { useState } from 'react';
 import './HomePage.css';
 import { featuredCreators } from '../data/creators';
+import { searchYoutubeChannels } from '../services/youtubeResolver';
 
 import type { CreatorProfile, Platform, Stream } from '../types';
+import type { YoutubeChannelResult } from '../services/youtubeResolver';
 
-type YoutubeSearchResponse = {
-    items?: Array<{
-        id?: {
-            channelId?: string;
-        };
-        snippet?: {
-            title?: string;
-            description?: string;
-            thumbnails?: {
-                medium?: {
-                    url?: string;
-                };
-            };
-        };
-    }>;
-};
-
-type ChannelResult = {
-    id: string;
-    title: string;
-    description: string;
-    thumbnail?: string;
-};
+type ChannelResult = YoutubeChannelResult;
 
 interface HomePageProps {
     activeStreams: Stream[];
@@ -34,8 +14,6 @@ interface HomePageProps {
     onOpenAddModal: () => void;
     onOpenWatch: () => void;
 }
-
-const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY || '';
 
 const isStreamActive = (streams: Stream[], creator: Pick<Stream, 'id' | 'platform'>) => {
     return streams.some((stream) => stream.id === creator.id && stream.platform === creator.platform);
@@ -69,41 +47,10 @@ const HomePage: React.FC<HomePageProps> = ({ activeStreams, onAddStream, onOpenA
         setSearchError(null);
         setResults([]);
 
-        if (!YOUTUBE_API_KEY) {
-            setSearchError('Configure VITE_YOUTUBE_API_KEY para pesquisar canais do YouTube.');
-            return;
-        }
-
         setIsSearching(true);
 
         try {
-            const params = new URLSearchParams({
-                part: 'snippet',
-                maxResults: '6',
-                q: cleanQuery,
-                type: 'channel',
-                key: YOUTUBE_API_KEY,
-            });
-            const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${params.toString()}`);
-
-            if (!response.ok) {
-                throw new Error('Nao foi possivel pesquisar canais agora.');
-            }
-
-            const data = await response.json() as YoutubeSearchResponse;
-            const channels = data.items
-                ?.map((item): ChannelResult | null => {
-                    const id = item.id?.channelId;
-                    if (!id) return null;
-
-                    return {
-                        id,
-                        title: item.snippet?.title || id,
-                        description: item.snippet?.description || 'Canal do YouTube',
-                        thumbnail: item.snippet?.thumbnails?.medium?.url,
-                    };
-                })
-                .filter((item): item is ChannelResult => Boolean(item)) || [];
+            const channels = await searchYoutubeChannels(cleanQuery, 6);
 
             setResults(channels);
             if (channels.length === 0) {

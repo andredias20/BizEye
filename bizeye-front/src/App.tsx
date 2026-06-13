@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react'
+import { FlagDefinitions, FlagValues } from 'flags/react'
 import './App.css'
 import Header from './components/Header'
 import AddStreamModal from './components/AddStreamModal'
 import HomePage from './pages/HomePage'
 import WatchPage from './pages/WatchPage'
 import { starterStreams } from './data/creators'
+import {
+  flagDefinitions,
+  getBizeyeResolveFlagValue,
+  getFlagValues,
+  getInitialBizeyeResolveFlagValue,
+} from './flags'
 import {
   loadStoredStreams,
   loadStoredWatchLayout,
@@ -24,6 +31,7 @@ function App() {
   const [activeStreams, setActiveStreams] = useState<Stream[]>(() => loadStoredStreams(starterStreams));
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<AppPage>(getPageFromHash);
+  const [bizeyeResolveFlagValue, setBizeyeResolveFlagValue] = useState(getInitialBizeyeResolveFlagValue);
   const [layoutMode, setLayoutMode] = useState<ViewLayoutMode>(() => loadStoredWatchLayout('balanced'));
 
   useEffect(() => {
@@ -31,6 +39,18 @@ function App() {
     window.addEventListener('hashchange', handleHashChange);
 
     return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    getBizeyeResolveFlagValue().then((value) => {
+      if (!isCancelled) setBizeyeResolveFlagValue(value);
+    });
+
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
   const navigateTo = (page: AppPage) => {
@@ -70,6 +90,9 @@ function App() {
 
   return (
     <div className={`app-shell app-shell--${currentPage}`}>
+      <FlagDefinitions definitions={flagDefinitions} />
+      <FlagValues values={getFlagValues(bizeyeResolveFlagValue)} />
+
       <Header
         currentPage={currentPage}
         streamCount={activeStreams.length}

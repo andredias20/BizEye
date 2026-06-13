@@ -1,24 +1,7 @@
 import React, { useState } from 'react';
+import { resolveYoutubeInput } from '../services/youtubeResolver';
 import type { Platform } from '../types';
 import './AddStreamModal.css';
-
-type YoutubeChannelListResponse = {
-    items?: Array<{
-        id?: string;
-        snippet?: {
-            title?: string;
-        };
-    }>;
-};
-
-type YoutubeChannelSearchResponse = {
-    items?: Array<{
-        snippet?: {
-            channelId?: string;
-            title?: string;
-        };
-    }>;
-};
 
 interface AddStreamModalProps {
     isOpen: boolean;
@@ -36,100 +19,7 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Use Vite environment variable for the API Key
-    const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY || '';
-
     if (!isOpen) return null;
-
-    const resolveYoutubeId = async (input: string): Promise<{ id: string; title: string }> => {
-        const cleanInput = input.trim();
-
-        // 1. Try to extract Video ID from watch?v= or youtu.be/
-        if (cleanInput.includes('youtube.com/watch') || cleanInput.includes('youtu.be/')) {
-            try {
-                const url = new URL(cleanInput.includes('http') ? cleanInput : `https://${cleanInput}`);
-                if (url.hostname.includes('youtu.be')) {
-                    const id = url.pathname.slice(1);
-                    return { id, title: id }; // Default title to ID for direct video links
-                }
-                const videoId = url.searchParams.get('v');
-                if (videoId) return { id: videoId, title: videoId };
-            } catch {
-                // fall through
-            }
-        }
-
-        // 2. Try to find a UC ID directly (regex)
-        const ucMatch = cleanInput.match(/UC[a-zA-Z0-9_-]{22}/);
-        if (ucMatch) return { id: ucMatch[0], title: ucMatch[0] };
-
-        // 3. Identify Handle or Channel Name
-        let handle = '';
-        if (cleanInput.includes('youtube.com/')) {
-            try {
-                const url = new URL(cleanInput.includes('http') ? cleanInput : `https://${cleanInput}`);
-                const pathParts = url.pathname.split('/').filter(p => !['c', 'user', 'channel'].includes(p) && p !== '');
-                handle = pathParts[0] || '';
-            } catch {
-                handle = cleanInput.split('/').pop() || '';
-            }
-        } else {
-            handle = cleanInput;
-        }
-
-        // Standardize handle format
-        if (handle && !handle.startsWith('@') && !handle.startsWith('UC')) {
-            handle = `@${handle}`;
-        }
-
-        if (!handle) throw new Error('Could not identify a YouTube handle or ID in the input.');
-
-        // 4. API Resolution
-        if (!YOUTUBE_API_KEY) {
-            throw new Error('YT CONFIG ERROR: YouTube API Key missing. Enter UC ID directly or fix .env.');
-        }
-
-        try {
-            console.log(`Step 1: Trying forHandle resolution for: ${handle}`);
-
-            // Step A: Try direct channel lookup by handle
-            const hRes = await fetch(
-                `https://www.googleapis.com/youtube/v3/channels?part=id,snippet&forHandle=${encodeURIComponent(handle)}&key=${YOUTUBE_API_KEY}`
-            );
-
-            if (hRes.ok) {
-                const hData = await hRes.json() as YoutubeChannelListResponse;
-                const channel = hData.items?.[0];
-                if (channel?.id) {
-                    return {
-                        id: channel.id,
-                        title: channel.snippet?.title || handle
-                    };
-                }
-            }
-
-            console.log(`Step 2: Fallback to Search for: ${handle}`);
-            // Step B: Fallback to Search (more robust for custom URLs/names)
-            const sRes = await fetch(
-                `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(handle)}&maxResults=1&key=${YOUTUBE_API_KEY}`
-            );
-
-            if (sRes.ok) {
-                const sData = await sRes.json() as YoutubeChannelSearchResponse;
-                if (sData.items?.[0]?.snippet?.channelId) {
-                    return {
-                        id: sData.items[0].snippet.channelId,
-                        title: sData.items[0].snippet.title || handle
-                    };
-                }
-            }
-
-            throw new Error(`Channel not found for: ${handle}. Try using the full Channel URL.`);
-        } catch (err: unknown) {
-            console.error('YouTube resolution failed:', err);
-            throw err;
-        }
-    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -142,7 +32,7 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
             if (!id) throw new Error('Please enter a link or ID');
 
             if (platform === 'youtube') {
-                const resolved = await resolveYoutubeId(id);
+                const resolved = await resolveYoutubeInput(id);
                 id = resolved.id;
                 title = resolved.title;
             } else {
