@@ -49,23 +49,7 @@ npm run build                  # gera o build de produção
 npm run preview                # abre uma prévia local do build
 ```
 
-### Worktrees no Codex
-
-Este repositório inclui uma configuração local do Codex em:
-
-```text
-.codex/environments/environment.toml
-```
-
-Ao criar um worktree no Codex, selecione o ambiente local `BizEye`. O script de setup executa:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\.codex\setup-worktree.ps1
-```
-
-Esse script valida Node/npm, instala dependências com `npm ci` e roda um build inicial de produção.
-
-Antes de finalizar alterações, execute:
+### Validação
 
 ```powershell
 npm run lint
@@ -121,23 +105,7 @@ npm run build                  # create a production build
 npm run preview                # preview the production build locally
 ```
 
-### Codex worktrees
-
-This repository includes a local Codex environment at:
-
-```text
-.codex/environments/environment.toml
-```
-
-When creating a Codex worktree, select the `BizEye` local environment. The setup script runs:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\.codex\setup-worktree.ps1
-```
-
-That script validates Node/npm, installs dependencies with `npm ci`, and runs an initial production build.
-
-Before finishing changes, run:
+### Validation
 
 ```powershell
 npm run lint
