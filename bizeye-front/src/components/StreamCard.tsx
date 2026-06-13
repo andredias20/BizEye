@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import './StreamCard.css';
 import VideoPlayer from './VideoPlayer';
+import type { PlaybackProfile } from '../types';
 
 interface StreamCardProps {
     liveStatus?: 'live' | 'offline' | 'unknown' | 'error' | 'quota_limited';
     onLiveVideoResolved: (channelId: string, videoId: string, title?: string) => void;
+    playbackProfile?: PlaybackProfile;
     streamId: string;
     platform: 'youtube' | 'twitch' | 'kick';
     title?: string;
@@ -16,6 +18,7 @@ const StreamCard: React.FC<StreamCardProps> = ({
     liveStatus,
     onLiveVideoResolved,
     onRemove,
+    playbackProfile = 'standard',
     platform,
     streamId,
     title,
@@ -27,9 +30,10 @@ const StreamCard: React.FC<StreamCardProps> = ({
     const [channelName, setChannelName] = useState<string | null>(title || null);
 
     const toggleMute = () => setIsMuted(!isMuted);
+    const className = playbackProfile === 'firetv' ? 'stream-card stream-card--firetv' : 'stream-card';
 
     return (
-        <div className="stream-card">
+        <div className={className}>
             {/* Top Controls */}
             <div className="card-controls top">
                 <button className="remove-btn" onClick={onRemove}>x</button>
@@ -88,6 +92,7 @@ const StreamCard: React.FC<StreamCardProps> = ({
                     setVolume={setVolume}
                     onLiveVideoResolved={onLiveVideoResolved}
                     onSignalError={() => setHasSignal(false)}
+                    playbackProfile={playbackProfile}
                     onMetadata={(data: { author: string }) => {
                         // Only update if we don't have a specific title from the modal/hardcoded state
                         if (!title) setChannelName(data.author);

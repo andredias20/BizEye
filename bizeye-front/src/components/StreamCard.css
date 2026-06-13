@@ -17,6 +17,18 @@
     box-shadow: 0 18px 58px rgba(34, 211, 238, 0.12);
 }
 
+.stream-card--firetv {
+    border-color: rgba(255, 255, 255, 0.06);
+    border-radius: 2px;
+    box-shadow: none;
+    transition: none;
+}
+
+.stream-card--firetv:hover {
+    border-color: rgba(255, 255, 255, 0.06);
+    box-shadow: none;
+}
+
 .player-wrapper {
     width: 100%;
     height: 100%;
@@ -41,6 +53,10 @@
     opacity: 0;
     pointer-events: auto;
     transition: opacity 0.2s;
+}
+
+.stream-card--firetv .card-controls {
+    transition: none;
 }
 
 .stream-card:hover .card-controls {
@@ -145,6 +161,16 @@
     backdrop-filter: blur(8px);
 }
 
+.stream-card--firetv .badge-header {
+    gap: 0.35rem;
+    margin-bottom: 0;
+    padding: 3px 5px;
+    border: 0;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.58);
+    backdrop-filter: none;
+}
+
 .live-indicator {
     border-radius: 2px;
     padding: 1px 4px;
@@ -153,6 +179,10 @@
     font-size: 0.6rem;
     font-weight: bold;
     animation: pulse 2s infinite;
+}
+
+.stream-card--firetv .live-indicator {
+    animation: none;
 }
 
 @keyframes pulse {
@@ -198,6 +228,21 @@
     font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.stream-card--firetv .live-badge-overlay {
+    top: 0.35rem;
+    left: 0.35rem;
+    max-width: calc(100% - 0.7rem);
+}
+
+.stream-card--firetv .live-indicator,
+.stream-card--firetv .platform-icon {
+    font-size: 0.56rem;
+}
+
+.stream-card--firetv .channel-id {
+    font-size: 0.68rem;
 }
 
 .signal-loss {

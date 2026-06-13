@@ -1,7 +1,7 @@
 import React from 'react';
 import './Header.css';
 
-type AppPage = 'home' | 'watch';
+type AppPage = 'firetv' | 'home' | 'watch';
 
 interface HeaderProps {
   currentPage: AppPage;
@@ -14,6 +14,10 @@ const Header: React.FC<HeaderProps> = ({ currentPage, streamCount, onAddStream, 
   const getFullscreenTarget = () => {
     if (currentPage === 'watch') {
       return document.querySelector<HTMLElement>('.watch-page') || document.documentElement;
+    }
+
+    if (currentPage === 'firetv') {
+      return document.querySelector<HTMLElement>('.firetv-page') || document.documentElement;
     }
 
     return document.documentElement;
@@ -58,6 +62,13 @@ const Header: React.FC<HeaderProps> = ({ currentPage, streamCount, onAddStream, 
           type="button"
         >
           Watch
+        </button>
+        <button
+          className={currentPage === 'firetv' ? 'active' : ''}
+          onClick={() => onNavigate('firetv')}
+          type="button"
+        >
+          Fire TV
         </button>
       </nav>
 

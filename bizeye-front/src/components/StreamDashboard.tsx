@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './StreamDashboard.css';
 import StreamCard from './StreamCard';
 
-import type { Stream, ViewLayoutMode } from '../types';
+import type { PlaybackProfile, Stream, ViewLayoutMode } from '../types';
 
 interface StreamDashboardProps {
     layoutMode: ViewLayoutMode;
     onLiveVideoResolved: (channelId: string, videoId: string, title?: string) => void;
+    playbackProfile?: PlaybackProfile;
     streams: Stream[];
     onRemoveStream: (id: string, platform: Stream['platform']) => void;
 }
@@ -27,15 +28,16 @@ type GridCandidate = {
 };
 
 const VIDEO_ASPECT = 16 / 9;
-const GRID_GAP = 8;
+const DEFAULT_GRID_GAP = 8;
+const FIRETV_GRID_GAP = 4;
 const VIABLE_AREA_RATIO = 0.52;
 
 const byArea = (a: GridCandidate, b: GridCandidate) => b.area - a.area;
 
-const createFitCandidate = (count: number, cols: number, width: number, height: number): GridCandidate | null => {
+const createFitCandidate = (count: number, cols: number, width: number, height: number, gap: number): GridCandidate | null => {
     const rows = Math.ceil(count / cols);
-    const cellWidth = (width - GRID_GAP * (cols - 1)) / cols;
-    const cellHeight = (height - GRID_GAP * (rows - 1)) / rows;
+    const cellWidth = (width - gap * (cols - 1)) / cols;
+    const cellHeight = (height - gap * (rows - 1)) / rows;
 
     if (cellWidth <= 0 || cellHeight <= 0) return null;
 
@@ -50,16 +52,16 @@ const createFitCandidate = (count: number, cols: number, width: number, height: 
         rows,
         tileHeight,
         tileWidth,
-        totalHeight: tileHeight * rows + GRID_GAP * (rows - 1),
-        totalWidth: tileWidth * cols + GRID_GAP * (cols - 1),
+        totalHeight: tileHeight * rows + gap * (rows - 1),
+        totalWidth: tileWidth * cols + gap * (cols - 1),
     };
 };
 
-const createWidthGuidedCandidate = (count: number, cols: number, width: number, height: number): GridCandidate | null => {
+const createWidthGuidedCandidate = (count: number, cols: number, width: number, height: number, gap: number): GridCandidate | null => {
     const rows = Math.ceil(count / cols);
-    const tileWidth = Math.floor((width - GRID_GAP * (cols - 1)) / cols);
+    const tileWidth = Math.floor((width - gap * (cols - 1)) / cols);
     const tileHeight = Math.floor(tileWidth / VIDEO_ASPECT);
-    const totalHeight = tileHeight * rows + GRID_GAP * (rows - 1);
+    const totalHeight = tileHeight * rows + gap * (rows - 1);
 
     if (tileWidth <= 0 || tileHeight <= 0 || totalHeight > height) return null;
 
@@ -74,11 +76,11 @@ const createWidthGuidedCandidate = (count: number, cols: number, width: number, 
     };
 };
 
-const createHeightGuidedCandidate = (count: number, rows: number, width: number, height: number): GridCandidate | null => {
+const createHeightGuidedCandidate = (count: number, rows: number, width: number, height: number, gap: number): GridCandidate | null => {
     const cols = Math.ceil(count / rows);
-    const tileHeight = Math.floor((height - GRID_GAP * (rows - 1)) / rows);
+    const tileHeight = Math.floor((height - gap * (rows - 1)) / rows);
     const tileWidth = Math.floor(tileHeight * VIDEO_ASPECT);
-    const totalWidth = tileWidth * cols + GRID_GAP * (cols - 1);
+    const totalWidth = tileWidth * cols + gap * (cols - 1);
 
     if (tileWidth <= 0 || tileHeight <= 0 || totalWidth > width) return null;
 
@@ -103,16 +105,16 @@ const getFallbackLayout = (count: number): GridCandidate => {
         rows,
         tileHeight: 180,
         tileWidth: 320,
-        totalHeight: 180 * rows + GRID_GAP * (rows - 1),
-        totalWidth: 320 * cols + GRID_GAP * (cols - 1),
+        totalHeight: 180 * rows + DEFAULT_GRID_GAP * (rows - 1),
+        totalWidth: 320 * cols + DEFAULT_GRID_GAP * (cols - 1),
     };
 };
 
-const computeLayout = (count: number, bounds: GridBounds, mode: ViewLayoutMode): GridCandidate => {
+const computeLayout = (count: number, bounds: GridBounds, mode: ViewLayoutMode, gap: number): GridCandidate => {
     if (count <= 0 || bounds.width <= 0 || bounds.height <= 0) return getFallbackLayout(count);
 
     const fitCandidates = Array.from({ length: count }, (_, index) => index + 1)
-        .map((cols) => createFitCandidate(count, cols, bounds.width, bounds.height))
+        .map((cols) => createFitCandidate(count, cols, bounds.width, bounds.height, gap))
         .filter((candidate): candidate is GridCandidate => Boolean(candidate))
         .sort(byArea);
 
@@ -120,7 +122,7 @@ const computeLayout = (count: number, bounds: GridBounds, mode: ViewLayoutMode):
 
     if (mode === 'width-guided') {
         const widthCandidate = Array.from({ length: count }, (_, index) => index + 1)
-            .map((cols) => createWidthGuidedCandidate(count, cols, bounds.width, bounds.height))
+            .map((cols) => createWidthGuidedCandidate(count, cols, bounds.width, bounds.height, gap))
             .filter((candidate): candidate is GridCandidate => Boolean(candidate))
             .sort(byArea)[0];
 
@@ -129,7 +131,7 @@ const computeLayout = (count: number, bounds: GridBounds, mode: ViewLayoutMode):
 
     if (mode === 'height-guided') {
         const heightCandidate = Array.from({ length: count }, (_, index) => index + 1)
-            .map((rows) => createHeightGuidedCandidate(count, rows, bounds.width, bounds.height))
+            .map((rows) => createHeightGuidedCandidate(count, rows, bounds.width, bounds.height, gap))
             .filter((candidate): candidate is GridCandidate => Boolean(candidate))
             .sort(byArea)[0];
 
@@ -149,51 +151,75 @@ const computeLayout = (count: number, bounds: GridBounds, mode: ViewLayoutMode):
     return [...fitCandidates].sort((a, b) => b.area - a.area || Math.abs(a.cols - a.rows) - Math.abs(b.cols - b.rows))[0] || best;
 };
 
-const StreamDashboard: React.FC<StreamDashboardProps> = ({ streams, layoutMode, onLiveVideoResolved, onRemoveStream }) => {
+const StreamDashboard: React.FC<StreamDashboardProps> = ({
+    streams,
+    layoutMode,
+    onLiveVideoResolved,
+    onRemoveStream,
+    playbackProfile = 'standard',
+}) => {
     const dashboardRef = useRef<HTMLElement | null>(null);
     const [bounds, setBounds] = useState<GridBounds>({ height: 0, width: 0 });
+    const gridGap = playbackProfile === 'firetv' ? FIRETV_GRID_GAP : DEFAULT_GRID_GAP;
 
     useEffect(() => {
         const element = dashboardRef.current;
         if (!element) return;
+        let frameId = 0;
 
-        const updateBounds = () => {
+        const measureBounds = () => {
             const rect = element.getBoundingClientRect();
             setBounds({
-                height: Math.max(0, rect.height - GRID_GAP * 2),
-                width: Math.max(0, rect.width - GRID_GAP * 2),
+                height: Math.max(0, rect.height - gridGap * 2),
+                width: Math.max(0, rect.width - gridGap * 2),
             });
         };
 
-        updateBounds();
+        const updateBounds = () => {
+            if (frameId) return;
+
+            frameId = window.requestAnimationFrame(() => {
+                frameId = 0;
+                measureBounds();
+            });
+        };
+
+        measureBounds();
 
         const observer = new ResizeObserver(updateBounds);
         observer.observe(element);
         window.addEventListener('resize', updateBounds);
 
         return () => {
+            if (frameId) window.cancelAnimationFrame(frameId);
             observer.disconnect();
             window.removeEventListener('resize', updateBounds);
         };
-    }, []);
+    }, [gridGap]);
 
     const layout = useMemo(
-        () => computeLayout(streams.length, bounds, layoutMode),
-        [bounds, layoutMode, streams.length]
+        () => computeLayout(streams.length, bounds, layoutMode, gridGap),
+        [bounds, gridGap, layoutMode, streams.length]
     );
 
     const gridStyle = streams.length > 0
         ? {
-            gap: `${GRID_GAP}px`,
+            gap: `${gridGap}px`,
             gridTemplateColumns: `repeat(${layout.cols}, ${layout.tileWidth}px)`,
             gridTemplateRows: `repeat(${layout.rows}, ${layout.tileHeight}px)`,
         }
         : undefined;
 
+    const className = [
+        streams.length === 0 ? 'stream-grid stream-grid--empty' : 'stream-grid',
+        playbackProfile === 'firetv' ? 'stream-grid--firetv' : '',
+    ].filter(Boolean).join(' ');
+
     return (
         <section
-            className={streams.length === 0 ? 'stream-grid stream-grid--empty' : 'stream-grid'}
+            className={className}
             data-layout-mode={layoutMode}
+            data-playback-profile={playbackProfile}
             ref={dashboardRef}
             style={gridStyle}
         >
@@ -213,6 +239,7 @@ const StreamDashboard: React.FC<StreamDashboardProps> = ({ streams, layoutMode, 
                         videoId={stream.videoId}
                         onLiveVideoResolved={onLiveVideoResolved}
                         onRemove={() => onRemoveStream(stream.id, stream.platform)}
+                        playbackProfile={playbackProfile}
                     />
                 ))
             )}
