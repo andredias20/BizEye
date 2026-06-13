@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/dev.ts",
+    "dev:debug": "node --inspect=127.0.0.1:9229 --enable-source-maps --import tsx src/dev.ts",
+    "dev:debug:docker": "node --inspect=0.0.0.0:9229 --enable-source-maps --import tsx src/dev.ts",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
@@ -15,10 +17,12 @@
     "dotenv": "^17.4.2",
     "hono": "^4.10.7",
     "nanoid": "^5.1.6",
+    "pg": "^8.21.0",
     "zod": "^4.1.13"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
+    "@types/pg": "^8.20.0",
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "vitest": "^4.0.15"

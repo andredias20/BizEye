@@ -1,4 +1,5 @@
-import { requireYouTubeEnv } from '../config/env.js';
+import { getYouTubeApiMode, requireYouTubeEnv } from '../config/env.js';
+import { getMockYouTubeResponse } from './youtubeMock.js';
 
 const YOUTUBE_API_BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
@@ -20,6 +21,10 @@ export const buildYouTubeUrl = ({ path, params }: YouTubeRequestOptions) => {
 };
 
 export const fetchYouTubeJson = async <T>(options: YouTubeRequestOptions): Promise<T> => {
+  if (getYouTubeApiMode() === 'mock') {
+    return getMockYouTubeResponse<T>(options);
+  }
+
   const env = requireYouTubeEnv();
   const response = await fetch(buildYouTubeUrl(options), {
     headers: {

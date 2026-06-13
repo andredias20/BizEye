@@ -45,7 +45,13 @@ Use os arquivos `.env.example` como referência para criar os `.env.local`. Arqu
 Suba a stack completa a partir da raiz:
 
 ```powershell
-docker compose up --build
+npm run dev:stack
+```
+
+O comando sobe os containers em background. Para acompanhar logs:
+
+```powershell
+npm run dev:stack:logs
 ```
 
 Serviços locais:
@@ -60,11 +66,23 @@ O serviço `migrate` aplica as migrations em:
 bizeye-back/supabase/migrations
 ```
 
+Por padrão, o Compose usa `BIZEYE_DB_DRIVER=postgres`, `YOUTUBE_API_MODE=mock` e `VITE_FEATURE_BIZEYE_RESOLVE=true`. Isso permite rodar front, backend e banco sem `SUPABASE_SERVICE_ROLE_KEY` nem chave real do YouTube.
+
+Para depurar o backend com Node Inspector:
+
+```powershell
+npm run dev:stack:debug
+```
+
+Porta de debug: `127.0.0.1:9229`.
+
 ### Comandos
 
 ```powershell
+npm run dev:db
 npm run dev:front
 npm run dev:back
+npm run dev:back:debug
 npm run build:front
 npm run build:back
 ```
@@ -130,7 +148,13 @@ Use `.env.example` files as the reference for local `.env.local` files. Local en
 Start the full stack from the repository root:
 
 ```powershell
-docker compose up --build
+npm run dev:stack
+```
+
+The command starts the containers in the background. To follow logs:
+
+```powershell
+npm run dev:stack:logs
 ```
 
 Local services:
@@ -145,11 +169,23 @@ The `migrate` service applies migrations from:
 bizeye-back/supabase/migrations
 ```
 
+By default, Compose uses `BIZEYE_DB_DRIVER=postgres`, `YOUTUBE_API_MODE=mock`, and `VITE_FEATURE_BIZEYE_RESOLVE=true`. This lets the frontend, backend, and database run without `SUPABASE_SERVICE_ROLE_KEY` or a real YouTube API key.
+
+To debug the backend with Node Inspector:
+
+```powershell
+npm run dev:stack:debug
+```
+
+Debug port: `127.0.0.1:9229`.
+
 ### Commands
 
 ```powershell
+npm run dev:db
 npm run dev:front
 npm run dev:back
+npm run dev:back:debug
 npm run build:front
 npm run build:back
 ```

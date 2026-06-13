@@ -98,6 +98,41 @@ function App() {
     });
   }, []);
 
+  const applyYoutubeLiveStatuses = useCallback((statuses: Awaited<ReturnType<typeof fetchYoutubeLiveStatuses>>) => {
+    if (statuses.length === 0) return;
+
+    updateActiveStreams((streams) => {
+      let hasChanges = false;
+      const byChannelId = new Map(statuses.map((status) => [status.channelId, status]));
+      const nextStreams = streams.map((stream) => {
+        const status = byChannelId.get(stream.id);
+        if (!status || stream.platform !== 'youtube') return stream;
+
+        const nextVideoId = status.status === 'live' && status.videoId ? status.videoId : undefined;
+        const nextTitle = status.title || stream.title;
+
+        if (stream.videoId === nextVideoId && stream.liveStatus === status.status && stream.title === nextTitle) {
+          return stream;
+        }
+
+        hasChanges = true;
+        return {
+          ...stream,
+          liveStatus: status.status,
+          title: nextTitle,
+          videoId: nextVideoId,
+        };
+      });
+
+      return hasChanges ? nextStreams : streams;
+    });
+  }, [updateActiveStreams]);
+
+  const refreshYoutubeLiveStatuses = useCallback(async (channelIds: string[]) => {
+    const statuses = await fetchYoutubeLiveStatuses(channelIds);
+    applyYoutubeLiveStatuses(statuses);
+  }, [applyYoutubeLiveStatuses]);
+
   useEffect(() => {
     if (didRefreshInitialLives.current) return;
     didRefreshInitialLives.current = true;
@@ -111,39 +146,13 @@ function App() {
     let isCancelled = false;
 
     fetchYoutubeLiveStatuses(channelIds).then((statuses) => {
-      if (isCancelled || statuses.length === 0) return;
-
-      updateActiveStreams((streams) => {
-        let hasChanges = false;
-        const byChannelId = new Map(statuses.map((status) => [status.channelId, status]));
-        const nextStreams = streams.map((stream) => {
-          const status = byChannelId.get(stream.id);
-          if (!status || stream.platform !== 'youtube') return stream;
-
-          const nextVideoId = status.status === 'live' && status.videoId ? status.videoId : undefined;
-          const nextTitle = status.title || stream.title;
-
-          if (stream.videoId === nextVideoId && stream.liveStatus === status.status && stream.title === nextTitle) {
-            return stream;
-          }
-
-          hasChanges = true;
-          return {
-            ...stream,
-            liveStatus: status.status,
-            title: nextTitle,
-            videoId: nextVideoId,
-          };
-        });
-
-        return hasChanges ? nextStreams : streams;
-      });
+      if (!isCancelled) applyYoutubeLiveStatuses(statuses);
     });
 
     return () => {
       isCancelled = true;
     };
-  }, [activeStreams, updateActiveStreams]);
+  }, [activeStreams, applyYoutubeLiveStatuses]);
 
   const navigateTo = (page: AppPage) => {
     window.location.hash = page === 'watch' ? '/watch' : page === 'firetv' ? '/firetv' : '/';
@@ -156,6 +165,11 @@ function App() {
 
       return [...streams, { id, platform, title }];
     });
+
+    if (platform === 'youtube' && id.startsWith('UC')) {
+      void refreshYoutubeLiveStatuses([id]);
+    }
+
     setIsModalOpen(false);
   };
 

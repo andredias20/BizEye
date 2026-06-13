@@ -4,6 +4,7 @@ export const starterStreams: Stream[] = [
     { id: 'UCvgSmIdI92W4KnP15fJwfwA', platform: 'youtube', title: 'ACF' },
     { id: 'UCwRM1SXROyxSSJqrOTQzILw', platform: 'youtube', title: 'Tonimec' },
     { id: 'UCP9uupJdJnpOEJzTtigLPOg', platform: 'youtube', title: 'EEBrasil' },
+    { id: 'UCZiYbVptd3PVPf4f6eR6UaQ', platform: 'youtube', title: 'CazeTV' },
 ];
 
 export const featuredCreators: CreatorProfile[] = [
@@ -27,5 +28,12 @@ export const featuredCreators: CreatorProfile[] = [
         title: 'EEBrasil',
         handle: '@enriedu',
         description: 'Canal fixo para resolver live ativa pelo backend quando necessario.',
+    },
+    {
+        id: 'UCZiYbVptd3PVPf4f6eR6UaQ',
+        platform: 'youtube',
+        title: 'CazeTV',
+        handle: '@CazeTV',
+        description: 'Canal sugerido para acompanhar transmissões ao vivo via resolver do backend.',
     },
 ];

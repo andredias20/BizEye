@@ -82,15 +82,15 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
+      BIZEYE_DB_DRIVER: postgres
       PORT: 3000
       DATABASE_URL: postgresql://bizeye:bizeye_dev_password@db:5432/bizeye
       PGHOST: db
       PGDATABASE: bizeye
       PGUSER: bizeye
       PGPASSWORD: bizeye_dev_password
-      SUPABASE_URL: http://localhost:54321
-      SUPABASE_SERVICE_ROLE_KEY: local-service-role-key
-      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-local-youtube-api-key}
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
+      YOUTUBE_API_MODE: ${YOUTUBE_API_MODE:-mock}
       BIZEYE_FRONTEND_ORIGIN: http://localhost:5190
       SESSION_COOKIE_NAME: bizeye_admin_session
       CRON_SECRET: local-cron-secret
@@ -104,6 +104,14 @@ services:
       - -c
       - |
         set -eu
+        checksum="$$(cat package.json package-lock.json | sha256sum | cut -d ' ' -f 1)"
+        current="$$(cat node_modules/.bizeye-deps-hash 2>/dev/null || true)"
+        if [ "$$checksum" != "$$current" ]; then
+          echo "Installing backend dependencies because package files changed..."
+          npm ci
+          echo "$$checksum" > node_modules/.bizeye-deps-hash
+        fi
+
         attempts=0
         until pg_isready -h "$$PGHOST" -U "$$PGUSER" -d "$$PGDATABASE"; do
           attempts=$$((attempts + 1))
@@ -148,13 +156,27 @@ services:
         condition: service_healthy
     environment:
       VITE_RESOLVER_BASE_URL: http://localhost:3000
+      VITE_FEATURE_BIZEYE_RESOLVE: "true"
       CHOKIDAR_USEPOLLING: "true"
     ports:
       - "5190:5173"
     volumes:
       - ./bizeye-front:/app
       - bizeye_front_node_modules:/app/node_modules
-    command: npm run dev -- --host 0.0.0.0
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        checksum="$$(cat package.json package-lock.json | sha256sum | cut -d ' ' -f 1)"
+        current="$$(cat node_modules/.bizeye-deps-hash 2>/dev/null || true)"
+        if [ "$$checksum" != "$$current" ]; then
+          echo "Installing frontend dependencies because package files changed..."
+          npm ci
+          echo "$$checksum" > node_modules/.bizeye-deps-hash
+        fi
+
+        npm run dev -- --host 0.0.0.0
 
 volumes:
   bizeye_pg_data:
