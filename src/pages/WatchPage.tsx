@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import type { ChangeEvent } from 'react';
 import './WatchPage.css';
 import AddStreamButton from '../components/AddStreamButton';
 import StreamDashboard from '../components/StreamDashboard';
@@ -32,88 +32,53 @@ const qualityLabels: Record<StreamQuality, string> = {
 };
 
 interface StreamQualityDropdownProps {
+    isDisabled: boolean;
     onChange: (quality: StreamQuality) => void;
     value: StreamQuality;
 }
 
-const StreamQualityDropdown: React.FC<StreamQualityDropdownProps> = ({ onChange, value }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement | null>(null);
-    const listboxId = useId();
-    const selectedLabel = qualityLabels[value];
+const qualityLabelId = 'stream-quality-label';
 
-    useEffect(() => {
-        if (!isOpen) return;
+const StreamQualityDropdown = ({ isDisabled, onChange, value }: StreamQualityDropdownProps) => {
+    const selectValue = isDisabled ? 'auto' : value;
+    const title = isDisabled
+        ? 'YouTube e Kick usam qualidade automatica pelo provedor.'
+        : 'Qualidade solicitada para Twitch.';
 
-        const handlePointerDown = (event: PointerEvent) => {
-            if (!dropdownRef.current?.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
-                setIsOpen(false);
-            }
-        };
-
-        document.addEventListener('pointerdown', handlePointerDown);
-        document.addEventListener('keydown', handleKeyDown);
-
-        return () => {
-            document.removeEventListener('pointerdown', handlePointerDown);
-            document.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [isOpen]);
-
-    const selectQuality = (quality: StreamQuality) => {
-        onChange(quality);
-        setIsOpen(false);
+    const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
+        onChange(event.target.value as StreamQuality);
     };
 
     return (
-        <div className="stream-quality-dropdown" ref={dropdownRef}>
-            <span className="stream-quality-label" id={`${listboxId}-label`}>Qualidade</span>
-            <button
-                aria-controls={listboxId}
-                aria-expanded={isOpen}
-                aria-haspopup="listbox"
-                aria-labelledby={`${listboxId}-label ${listboxId}-value`}
-                className="stream-quality-trigger"
-                onClick={() => setIsOpen((current) => !current)}
-                type="button"
-            >
-                <span id={`${listboxId}-value`}>{selectedLabel}</span>
-                <span aria-hidden="true" className="stream-quality-chevron" />
-            </button>
-
-            {isOpen && (
-                <div
-                    aria-labelledby={`${listboxId}-label`}
-                    className="stream-quality-menu"
-                    id={listboxId}
-                    role="listbox"
+        <div
+            className={isDisabled ? 'stream-quality-dropdown is-disabled' : 'stream-quality-dropdown'}
+            title={title}
+        >
+            <span className="stream-quality-label" id={qualityLabelId}>Qualidade Twitch</span>
+            <div className="stream-quality-select-wrap">
+                <select
+                    aria-labelledby={qualityLabelId}
+                    className="stream-quality-trigger"
+                    disabled={isDisabled}
+                    onChange={handleChange}
+                    value={selectValue}
                 >
                     {STREAM_QUALITY_OPTIONS.map((quality) => (
-                        <button
-                            aria-selected={quality === value}
-                            className={quality === value ? 'stream-quality-option active' : 'stream-quality-option'}
+                        <option
                             key={quality}
-                            onClick={() => selectQuality(quality)}
-                            role="option"
-                            type="button"
+                            value={quality}
                         >
-                            <span>{qualityLabels[quality]}</span>
-                            <span aria-hidden="true" className="stream-quality-check" />
-                        </button>
+                            {qualityLabels[quality]}
+                        </option>
                     ))}
-                </div>
-            )}
+                </select>
+                <span aria-hidden="true" className="stream-quality-chevron" />
+            </div>
         </div>
     );
 };
 
-const WatchPage: React.FC<WatchPageProps> = ({
+const WatchPage = ({
     layoutMode,
     onAddStream,
     onLayoutModeChange,
@@ -121,7 +86,9 @@ const WatchPage: React.FC<WatchPageProps> = ({
     onStreamQualityChange,
     streamQuality,
     streams,
-}) => {
+}: WatchPageProps) => {
+    const hasQualityControlledProvider = streams.some((stream) => stream.platform === 'twitch');
+
     const exitFullscreen = () => {
         if (document.fullscreenElement && document.exitFullscreen) {
             document.exitFullscreen();
@@ -138,6 +105,7 @@ const WatchPage: React.FC<WatchPageProps> = ({
 
                 <div className="watch-controls">
                     <StreamQualityDropdown
+                        isDisabled={!hasQualityControlledProvider}
                         onChange={onStreamQualityChange}
                         value={streamQuality}
                     />

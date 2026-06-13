@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { StreamQuality } from '../../types';
 
 type YouTubeVideoData = {
     author?: string;
@@ -11,7 +10,6 @@ type YouTubePlayerInstance = {
     getVideoData: () => YouTubeVideoData;
     mute: () => void;
     playVideo: () => void;
-    setPlaybackQuality?: (quality: string) => void;
     setVolume: (volume: number) => void;
     unMute: () => void;
 };
@@ -57,22 +55,11 @@ interface YouTubePlayerProps {
     setIsMuted: (muted: boolean) => void;
     volume: number;
     setVolume: (volume: number) => void;
-    streamQuality: StreamQuality;
     onSignalError: () => void;
     onMetadata?: (data: { author: string; title: string }) => void;
 }
 
 const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY || '';
-
-const YOUTUBE_QUALITY_MAP: Record<Exclude<StreamQuality, 'auto'>, string> = {
-    '1080p': 'hd1080',
-    '720p': 'hd720',
-    '480p': 'large',
-};
-
-const getYoutubePlaybackQuality = (quality: StreamQuality) => {
-    return quality === 'auto' ? undefined : YOUTUBE_QUALITY_MAP[quality];
-};
 
 const isYoutubeChannelId = (value: string) => /^UC[a-zA-Z0-9_-]{22}$/.test(value);
 
@@ -107,7 +94,6 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     setIsMuted,
     volume,
     setVolume,
-    streamQuality,
     onSignalError,
     onMetadata
 }) => {
@@ -127,7 +113,6 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     const [resolvedLiveVideoId, setResolvedLiveVideoId] = useState<string | null>(null);
     const [shouldUseChannelFallback, setShouldUseChannelFallback] = useState(false);
     const effectiveVideoId = currentVideoId || resolvedLiveVideoId;
-    const playbackQuality = getYoutubePlaybackQuality(streamQuality);
 
     useEffect(() => {
         isMutedRef.current = isMuted;
@@ -183,12 +168,8 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             origin: origin
         });
 
-        if (playbackQuality) {
-            params.set('vq', playbackQuality);
-        }
-
         return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${params.toString()}`;
-    }, [streamId, effectiveVideoId, isChannelStream, playbackQuality, shouldResolveLiveWithApi, shouldUseChannelFallback]);
+    }, [streamId, effectiveVideoId, isChannelStream, shouldResolveLiveWithApi, shouldUseChannelFallback]);
 
     const createYoutubeIframe = React.useCallback(() => {
         if (!containerRef.current || !embedUrl) return null;
@@ -221,15 +202,6 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 onReady: (event: YouTubePlayerEvent) => {
                     setIsPlayerReady(true);
                     event.target.setVolume(volumeRef.current);
-
-                    // Suggest the dashboard quality when the provider accepts it.
-                    try {
-                        if (playbackQuality && event.target.setPlaybackQuality) {
-                            event.target.setPlaybackQuality(playbackQuality);
-                        }
-                    } catch (e) {
-                        console.warn("YouTube setPlaybackQuality error:", e);
-                    }
 
                     event.target.playVideo();
                     if (isMutedRef.current) event.target.mute();
@@ -267,17 +239,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 }
             }
         });
-    }, [effectiveVideoId, isChannelStream, playbackQuality, streamId]);
-
-    useEffect(() => {
-        if (isPlayerReady && playerRef.current && playbackQuality) {
-            try {
-                playerRef.current.setPlaybackQuality?.(playbackQuality);
-            } catch (e) {
-                console.warn("YouTube setPlaybackQuality error:", e);
-            }
-        }
-    }, [isPlayerReady, playbackQuality]);
+    }, [effectiveVideoId, isChannelStream, streamId]);
 
     useEffect(() => {
         let isCancelled = false;

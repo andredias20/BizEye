@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { StreamQuality } from '../../types';
 
-type TwitchQuality = {
+type TwitchQuality = string | {
     group?: string;
     name?: string;
 };
@@ -25,6 +25,7 @@ type TwitchPlayerConstructor = {
         muted: boolean;
     }): TwitchPlayerInstance;
     READY: string;
+    PLAYING: string;
     OFFLINE: string;
     ERROR: string;
 };
@@ -60,21 +61,34 @@ const getTwitchQualityCandidates = (quality: StreamQuality) => {
     }
 };
 
+const getTwitchQualityName = (quality: TwitchQuality) => {
+    return typeof quality === 'string' ? quality : quality.group || quality.name;
+};
+
 const applyTwitchQuality = (player: TwitchPlayerInstance, quality: StreamQuality) => {
-    if (!player.setQuality) return;
+    if (!player.setQuality || !player.getQualities) return false;
 
     try {
         const candidates = getTwitchQualityCandidates(quality);
-        const availableQualities = player.getQualities?.() ?? [];
-        const availableNames = new Set(
-            availableQualities.flatMap((item) => [item.group, item.name]).filter(Boolean)
-        );
-        const selectedQuality = candidates.find((candidate) => availableNames.has(candidate)) ?? candidates[0];
+        const availableNames = new Set(player.getQualities().map(getTwitchQualityName).filter(Boolean));
+        const selectedQuality = candidates.find((candidate) => availableNames.has(candidate));
+
+        if (!selectedQuality) return false;
 
         player.setQuality(selectedQuality);
+        return true;
     } catch (e) {
         console.warn("Twitch setQuality error:", e);
+        return false;
     }
+};
+
+const applyTwitchQualityWithRetry = (player: TwitchPlayerInstance, quality: StreamQuality, attempts = 4) => {
+    if (applyTwitchQuality(player, quality) || attempts <= 1) return;
+
+    window.setTimeout(() => {
+        applyTwitchQualityWithRetry(player, quality, attempts - 1);
+    }, 700);
 };
 
 const TwitchPlayer: React.FC<TwitchPlayerProps> = ({
@@ -120,7 +134,7 @@ const TwitchPlayer: React.FC<TwitchPlayerProps> = ({
             setIsPlayerReady(true);
             player.setVolume(volumeRef.current / 100);
             player.setMuted(isMutedRef.current);
-            applyTwitchQuality(player, streamQualityRef.current);
+            applyTwitchQualityWithRetry(player, streamQualityRef.current);
 
             // Explicitly call play to handle some browser autoplay restrictions if muted
             try {
@@ -128,6 +142,10 @@ const TwitchPlayer: React.FC<TwitchPlayerProps> = ({
             } catch (e) {
                 console.warn("Twitch initial play() failed:", e);
             }
+        });
+
+        player.addEventListener(window.Twitch.Player.PLAYING, () => {
+            applyTwitchQualityWithRetry(player, streamQualityRef.current);
         });
 
         player.addEventListener(window.Twitch.Player.OFFLINE, () => {
@@ -195,7 +213,7 @@ const TwitchPlayer: React.FC<TwitchPlayerProps> = ({
 
     useEffect(() => {
         if (isPlayerReady && playerRef.current) {
-            applyTwitchQuality(playerRef.current, streamQuality);
+            applyTwitchQualityWithRetry(playerRef.current, streamQuality);
         }
     }, [isPlayerReady, streamQuality]);
 

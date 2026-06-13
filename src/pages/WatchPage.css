@@ -60,7 +60,14 @@
     white-space: nowrap;
 }
 
+.stream-quality-select-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
 .stream-quality-trigger {
+    appearance: none;
     display: inline-flex;
     align-items: center;
     justify-content: space-between;
@@ -76,92 +83,43 @@
     cursor: pointer;
     font-size: 0.76rem;
     font-weight: 900;
-    padding: 0 0.75rem;
+    line-height: 1;
+    padding: 0 2rem 0 0.75rem;
     transition: border-color 0.2s, box-shadow 0.2s, color 0.2s;
 }
 
-.stream-quality-trigger:hover,
-.stream-quality-trigger:focus-visible,
-.stream-quality-dropdown:has(.stream-quality-menu) .stream-quality-trigger {
+.stream-quality-trigger:hover:not(:disabled),
+.stream-quality-trigger:focus-visible {
     border-color: rgba(34, 211, 238, 0.54);
     box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.08);
     outline: none;
 }
 
+.stream-quality-trigger:disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+}
+
+.stream-quality-dropdown.is-disabled .stream-quality-label {
+    color: rgba(148, 163, 184, 0.62);
+}
+
 .stream-quality-chevron {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    pointer-events: none;
     width: 7px;
     height: 7px;
     border-right: 2px solid currentColor;
     border-bottom: 2px solid currentColor;
     color: var(--accent-cyan);
-    transform: translateY(-2px) rotate(45deg);
+    transform: translateY(-60%) rotate(45deg);
     transition: transform 0.2s;
 }
 
-.stream-quality-dropdown:has(.stream-quality-menu) .stream-quality-chevron {
-    transform: translateY(2px) rotate(225deg);
-}
-
-.stream-quality-menu {
-    position: absolute;
-    top: calc(100% + 0.5rem);
-    right: 0;
-    z-index: 1300;
-    display: grid;
-    gap: 0.25rem;
-    width: 154px;
-    padding: 0.35rem;
-    border: 1px solid rgba(34, 211, 238, 0.22);
-    border-radius: 16px;
-    background:
-        linear-gradient(180deg, rgba(18, 20, 31, 0.98), rgba(3, 4, 10, 0.98)),
-        var(--surface-strong);
-    box-shadow:
-        0 18px 48px rgba(0, 0, 0, 0.48),
-        0 0 0 1px rgba(255, 255, 255, 0.04) inset;
-    backdrop-filter: blur(16px);
-}
-
-.stream-quality-option {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 36px;
-    width: 100%;
-    border: 0;
-    border-radius: 11px;
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-weight: 850;
-    padding: 0 0.7rem;
-    text-align: left;
-    transition: background 0.2s, color 0.2s;
-}
-
-.stream-quality-option:hover,
-.stream-quality-option:focus-visible {
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--text);
-    outline: none;
-}
-
-.stream-quality-option.active {
-    background: rgba(34, 211, 238, 0.14);
-    color: var(--accent-cyan);
-}
-
-.stream-quality-check {
-    width: 7px;
-    height: 7px;
-    border-radius: 999px;
-    background: var(--accent-green);
-    box-shadow: 0 0 16px rgba(0, 255, 136, 0.78);
-    opacity: 0;
-}
-
-.stream-quality-option.active .stream-quality-check {
-    opacity: 1;
+.stream-quality-dropdown.is-disabled .stream-quality-chevron {
+    color: rgba(148, 163, 184, 0.72);
 }
 
 .layout-control {
@@ -263,7 +221,29 @@
 }
 
 .watch-page:fullscreen .stream-quality-dropdown {
-    display: none;
+    gap: 0;
+}
+
+.watch-page:fullscreen .stream-quality-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.watch-page:fullscreen .stream-quality-trigger {
+    min-width: 78px;
+    min-height: 28px;
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 0.72rem;
+    padding: 0 1.65rem 0 0.55rem;
+}
+
+.watch-page:fullscreen .stream-quality-chevron {
+    right: 0.58rem;
 }
 
 .watch-page:fullscreen .layout-control {
@@ -314,11 +294,6 @@
         min-width: 104px;
     }
 
-    .stream-quality-menu {
-        right: 0;
-        left: auto;
-    }
-
     .watch-page:fullscreen .watch-toolbar {
         right: 0.5rem;
         left: 0.5rem;
@@ -334,7 +309,16 @@
     .watch-page:fullscreen .watch-controls {
         align-items: center;
         flex-direction: row;
+        flex-wrap: wrap;
         gap: 0.35rem;
+    }
+
+    .watch-page:fullscreen .stream-quality-dropdown {
+        width: auto;
+    }
+
+    .watch-page:fullscreen .layout-control {
+        order: 2;
     }
 
     .watch-page:fullscreen .fullscreen-exit-button {
