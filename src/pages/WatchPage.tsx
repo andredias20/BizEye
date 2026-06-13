@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import './WatchPage.css';
 import AddStreamButton from '../components/AddStreamButton';
+import ChatModal from '../components/ChatModal';
 import StreamDashboard from '../components/StreamDashboard';
 
 import type { Stream, ViewLayoutMode } from '../types';
@@ -27,6 +29,8 @@ const WatchPage: React.FC<WatchPageProps> = ({
     onRemoveStream,
     streams,
 }) => {
+    const [isChatOpen, setIsChatOpen] = useState(false);
+
     return (
         <main className="watch-page">
             <div className="watch-toolbar">
@@ -35,18 +39,33 @@ const WatchPage: React.FC<WatchPageProps> = ({
                     <strong>{streams.length} streams</strong>
                 </div>
 
-                <div className="layout-control" aria-label="Modo de visualizacao">
-                    {layoutOptions.map((option) => (
-                        <button
-                            className={layoutMode === option.id ? 'active' : ''}
-                            key={option.id}
-                            onClick={() => onLayoutModeChange(option.id)}
-                            title={option.title}
-                            type="button"
-                        >
-                            {option.label}
-                        </button>
-                    ))}
+                <div className="watch-toolbar-actions">
+                    <button
+                        className="watch-chat-button"
+                        disabled={streams.length === 0}
+                        onClick={() => setIsChatOpen(true)}
+                        title="Abrir chat"
+                        type="button"
+                    >
+                        <svg aria-hidden="true" height="18" viewBox="0 0 24 24" width="18">
+                            <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+                        </svg>
+                        Chat
+                    </button>
+
+                    <div className="layout-control" aria-label="Modo de visualizacao">
+                        {layoutOptions.map((option) => (
+                            <button
+                                className={layoutMode === option.id ? 'active' : ''}
+                                key={option.id}
+                                onClick={() => onLayoutModeChange(option.id)}
+                                title={option.title}
+                                type="button"
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -57,6 +76,12 @@ const WatchPage: React.FC<WatchPageProps> = ({
             />
 
             <AddStreamButton onClick={onAddStream} />
+
+            <ChatModal
+                isOpen={isChatOpen}
+                onClose={() => setIsChatOpen(false)}
+                streams={streams}
+            />
         </main>
     );
 };
