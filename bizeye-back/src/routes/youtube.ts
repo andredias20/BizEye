@@ -218,7 +218,8 @@ youtubeRoutes.get('/channels/:channelId/live', async (c) => {
   try {
     return c.json(await resolveLiveForChannel(channelId));
   } catch (error) {
-    return c.json({ error: 'youtube_live_lookup_failed', message: getErrorMessage(error) }, 502);
+    console.error('YouTube live lookup failed.', error);
+    return c.json({ error: 'youtube_live_lookup_failed', message: 'Live lookup unavailable.' }, 502);
   }
 });
 
@@ -233,6 +234,7 @@ youtubeRoutes.post('/channels/:channelId/live', async (c) => {
   try {
     return c.json(await recordObservedLiveVideo(channelId, parsed.data.videoId));
   } catch (error) {
-    return c.json({ error: 'youtube_live_observation_failed', message: getErrorMessage(error) }, 502);
+    console.error('YouTube live observation failed.', error);
+    return c.json({ error: 'youtube_live_observation_failed', message: 'Live observation unavailable.' }, 502);
   }
 });
