@@ -52,6 +52,7 @@ declare global {
 
 interface YouTubePlayerProps {
     streamId: string;
+    fallbackVideoId?: string;
     isMuted: boolean;
     setIsMuted: (muted: boolean) => void;
     volume: number;
@@ -79,6 +80,7 @@ const fetchYoutubeLiveVideoId = async (channelId: string): Promise<string | null
 
 const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     streamId,
+    fallbackVideoId,
     isMuted,
     setIsMuted,
     volume,
@@ -92,6 +94,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     const volumeRef = useRef(volume);
     const onMetadataRef = useRef(onMetadata);
     const onSignalErrorRef = useRef(onSignalError);
+    const skipNextDestroyRef = useRef(false);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
     const [currentVideoId, setCurrentVideoId] = useState<string | null>(
         streamId.startsWith('UC') ? null : streamId
@@ -174,9 +177,12 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                     if (streamId.startsWith('UC') && !currentVideoId) {
                         console.log(`Attempting fallback search for channel ${streamId}`);
                         const videoId = await fetchYoutubeLiveVideoId(streamId);
-                        if (videoId) {
-                            console.log(`Fallback search found videoId: ${videoId}`);
-                            setCurrentVideoId(videoId);
+                        const fallbackId = videoId || fallbackVideoId;
+                        if (fallbackId) {
+                            console.log(`Fallback found videoId: ${fallbackId}`);
+                            skipNextDestroyRef.current = true;
+                            setIsPlayerReady(false);
+                            setCurrentVideoId(fallbackId);
                             return; // Fallback will trigger iframe reload via currentVideoId state
                         }
                     }
@@ -185,7 +191,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 }
             }
         });
-    }, [currentVideoId, streamId]);
+    }, [currentVideoId, fallbackVideoId, streamId]);
 
     useEffect(() => {
         let isCancelled = false;
@@ -211,10 +217,14 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             isCancelled = true;
             if (playerRef.current) {
                 try {
-                    playerRef.current.destroy();
-                    playerRef.current = null;
+                    if (!skipNextDestroyRef.current && typeof playerRef.current.destroy === 'function') {
+                        playerRef.current.destroy();
+                    }
                 } catch (e) {
                     console.error("Error destroying YouTube player:", e);
+                } finally {
+                    skipNextDestroyRef.current = false;
+                    playerRef.current = null;
                 }
             }
             setIsPlayerReady(false);
@@ -224,9 +234,12 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     useEffect(() => {
         if (isPlayerReady && playerRef.current) {
             try {
-                playerRef.current.setVolume(volume);
-                if (isMuted) playerRef.current.mute();
-                else playerRef.current.unMute();
+                const player = playerRef.current;
+                if (typeof player.setVolume !== 'function') return;
+
+                player.setVolume(volume);
+                if (isMuted) player.mute();
+                else player.unMute();
             } catch (e) {
                 console.error("YouTube Volume Error:", e);
             }
@@ -236,13 +249,15 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     return (
         <div className="player-container youtube-player" style={{ width: '100%', height: '100%', position: 'relative' }}>
             <iframe
+                key={embedUrl}
                 ref={iframeRef}
                 src={embedUrl}
                 width="100%"
                 height="100%"
                 frameBorder="0"
-                allow="autoplay; encrypted-media"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
                 title={`YouTube Stream ${streamId}`}
                 style={{ width: '100%', height: '100%' }}
             />

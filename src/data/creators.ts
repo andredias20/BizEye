@@ -3,7 +3,7 @@ import type { CreatorProfile, Stream } from '../types';
 export const starterStreams: Stream[] = [
     { id: 'UCvgSmIdI92W4KnP15fJwfwA', platform: 'youtube', title: 'ACF' },
     { id: 'UCwRM1SXROyxSSJqrOTQzILw', platform: 'youtube', title: 'Tonimek' },
-    { id: 'UCP9uupJdJnpOEJzTtigLPOg', platform: 'youtube', title: 'EE Brasil' },
+    { id: 'UCP9uupJdJnpOEJzTtigLPOg', platform: 'youtube', title: 'EE Brasil', fallbackVideoId: 'zhqVdiazXQA' },
 ];
 
 export const featuredCreators: CreatorProfile[] = [
@@ -26,6 +26,7 @@ export const featuredCreators: CreatorProfile[] = [
         platform: 'youtube',
         title: 'EE Brasil',
         handle: '@enriedu',
+        fallbackVideoId: 'zhqVdiazXQA',
         description: 'Canal EEbrasil incluido na lista inicial de lives.',
     },
 ];

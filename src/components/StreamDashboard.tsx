@@ -207,6 +207,7 @@ const StreamDashboard: React.FC<StreamDashboardProps> = ({ streams, layoutMode, 
                         key={`${stream.platform}-${stream.id}`}
                         streamId={stream.id}
                         platform={stream.platform}
+                        fallbackVideoId={stream.fallbackVideoId}
                         title={stream.title}
                         onRemove={() => onRemoveStream(stream.id, stream.platform)}
                     />

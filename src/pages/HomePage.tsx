@@ -30,7 +30,7 @@ type ChannelResult = {
 
 interface HomePageProps {
     activeStreams: Stream[];
-    onAddStream: (id: string, platform: Platform, title?: string) => void;
+    onAddStream: (id: string, platform: Platform, title?: string, fallbackVideoId?: string) => void;
     onOpenAddModal: () => void;
     onOpenWatch: () => void;
 }
@@ -57,7 +57,7 @@ const HomePage: React.FC<HomePageProps> = ({ activeStreams, onAddStream, onOpenA
     const [searchError, setSearchError] = useState<string | null>(null);
 
     const handleFeaturedAdd = (creator: CreatorProfile) => {
-        onAddStream(creator.id, creator.platform, creator.title);
+        onAddStream(creator.id, creator.platform, creator.title, creator.fallbackVideoId);
     };
 
     const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {

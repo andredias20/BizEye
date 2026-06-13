@@ -7,6 +7,7 @@ import KickPlayer from './players/KickPlayer';
 interface VideoPlayerProps {
     streamId: string;
     platform: Platform;
+    fallbackVideoId?: string;
     isMuted: boolean;
     setIsMuted: (muted: boolean) => void;
     volume: number;

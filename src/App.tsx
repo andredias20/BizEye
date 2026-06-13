@@ -50,11 +50,11 @@ function App() {
     });
   };
 
-  const addStream = (id: string, platform: Platform, title?: string) => {
+  const addStream = (id: string, platform: Platform, title?: string, fallbackVideoId?: string) => {
     updateActiveStreams((streams) => {
       if (streams.find(s => s.id === id && s.platform === platform)) return streams;
 
-      return [...streams, { id, platform, title }];
+      return [...streams, { fallbackVideoId, id, platform, title }];
     });
     setIsModalOpen(false);
   };

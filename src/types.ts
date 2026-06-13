@@ -10,6 +10,7 @@ export type ViewLayoutMode =
 export interface Stream {
     id: string;
     platform: Platform;
+    fallbackVideoId?: string;
     title?: string;
 }
 

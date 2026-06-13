@@ -5,11 +5,12 @@ import VideoPlayer from './VideoPlayer';
 interface StreamCardProps {
     streamId: string;
     platform: 'youtube' | 'twitch' | 'kick';
+    fallbackVideoId?: string;
     title?: string;
     onRemove: () => void;
 }
 
-const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, title, onRemove }) => {
+const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, fallbackVideoId, title, onRemove }) => {
     const [isMuted, setIsMuted] = useState(true);
     const [volume, setVolume] = useState(50);
     const [hasSignal, setHasSignal] = useState(true);
@@ -69,6 +70,7 @@ const StreamCard: React.FC<StreamCardProps> = ({ streamId, platform, title, onRe
                 <VideoPlayer
                     streamId={streamId}
                     platform={platform}
+                    fallbackVideoId={fallbackVideoId}
                     isMuted={isMuted}
                     setIsMuted={setIsMuted}
                     volume={volume}

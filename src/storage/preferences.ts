@@ -24,8 +24,12 @@ const normalizeStream = (value: unknown): Stream | null => {
     const title = typeof candidate.title === 'string' && candidate.title.trim()
         ? candidate.title.trim()
         : undefined;
+    const fallbackVideoId = typeof candidate.fallbackVideoId === 'string' && candidate.fallbackVideoId.trim()
+        ? candidate.fallbackVideoId.trim()
+        : undefined;
 
     return {
+        fallbackVideoId,
         id,
         platform: platform as Platform,
         title,
@@ -44,6 +48,22 @@ const uniqueStreams = (streams: Stream[]) => {
     });
 };
 
+const mergeFallbackMetadata = (streams: Stream[], fallback: Stream[]) => {
+    const fallbackByStream = new Map(
+        fallback.map((stream) => [`${stream.platform}:${stream.id}`, stream])
+    );
+
+    return streams.map((stream) => {
+        const fallbackStream = fallbackByStream.get(`${stream.platform}:${stream.id}`);
+        if (!fallbackStream?.fallbackVideoId || stream.fallbackVideoId) return stream;
+
+        return {
+            ...stream,
+            fallbackVideoId: fallbackStream.fallbackVideoId,
+        };
+    });
+};
+
 export const loadStoredStreams = (fallback: Stream[]) => {
     if (!canUseLocalStorage()) return fallback;
 
@@ -54,7 +74,8 @@ export const loadStoredStreams = (fallback: Stream[]) => {
         const parsed = JSON.parse(rawStreams) as unknown;
         if (!Array.isArray(parsed)) return fallback;
 
-        return uniqueStreams(parsed.map(normalizeStream).filter((stream): stream is Stream => Boolean(stream)));
+        const streams = uniqueStreams(parsed.map(normalizeStream).filter((stream): stream is Stream => Boolean(stream)));
+        return mergeFallbackMetadata(streams, fallback);
     } catch (error) {
         console.warn('Could not load BizEye streams from localStorage:', error);
         return fallback;
