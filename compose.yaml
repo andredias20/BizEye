@@ -1,0 +1,162 @@
+name: bizeye
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bizeye-postgres
+    environment:
+      POSTGRES_DB: bizeye
+      POSTGRES_USER: bizeye
+      POSTGRES_PASSWORD: bizeye_dev_password
+    ports:
+      - "54322:5432"
+    volumes:
+      - bizeye_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bizeye -d bizeye"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: postgres:16-alpine
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGDATABASE: bizeye
+      PGUSER: bizeye
+      PGPASSWORD: bizeye_dev_password
+    volumes:
+      - ./bizeye-back/supabase/migrations:/migrations:ro
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        attempts=0
+        until pg_isready -h "$$PGHOST" -U "$$PGUSER" -d "$$PGDATABASE"; do
+          attempts=$$((attempts + 1))
+          if [ "$$attempts" -ge 30 ]; then
+            echo "Postgres did not become ready in time."
+            exit 1
+          fi
+          echo "Waiting for Postgres before running migrations..."
+          sleep 2
+        done
+
+        psql -v ON_ERROR_STOP=1 -c "create schema if not exists bizeye_dev"
+        psql -v ON_ERROR_STOP=1 -c "create table if not exists bizeye_dev.schema_migrations (version text primary key, applied_at timestamptz not null default now())"
+
+        for file in /migrations/*.sql; do
+          if [ ! -e "$$file" ]; then
+            echo "No migrations found."
+            exit 0
+          fi
+
+          version="$$(basename "$$file" .sql)"
+          if psql -tAc "select 1 from bizeye_dev.schema_migrations where version = '$$version'" | grep -q 1; then
+            echo "Skipping $$file"
+            continue
+          fi
+
+          if [ "$$version" = "202606130001_init" ] && psql -tAc "select to_regclass('public.youtube_live_resolutions') is not null" | grep -q t; then
+            echo "Marking $$file as applied because baseline tables already exist."
+            psql -v ON_ERROR_STOP=1 -c "insert into bizeye_dev.schema_migrations (version) values ('$$version') on conflict do nothing"
+            continue
+          fi
+
+          echo "Applying $$file"
+          psql -v ON_ERROR_STOP=1 -f "$$file"
+          psql -v ON_ERROR_STOP=1 -c "insert into bizeye_dev.schema_migrations (version) values ('$$version')"
+        done
+
+        echo "Migrations finished."
+
+  bizeye-back:
+    build:
+      context: ./bizeye-back
+      dockerfile: Dockerfile.dev
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://bizeye:bizeye_dev_password@db:5432/bizeye
+      PGHOST: db
+      PGDATABASE: bizeye
+      PGUSER: bizeye
+      PGPASSWORD: bizeye_dev_password
+      SUPABASE_URL: http://localhost:54321
+      SUPABASE_SERVICE_ROLE_KEY: local-service-role-key
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-local-youtube-api-key}
+      BIZEYE_FRONTEND_ORIGIN: http://localhost:5190
+      SESSION_COOKIE_NAME: bizeye_admin_session
+      CRON_SECRET: local-cron-secret
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./bizeye-back:/app
+      - bizeye_back_node_modules:/app/node_modules
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        attempts=0
+        until pg_isready -h "$$PGHOST" -U "$$PGUSER" -d "$$PGDATABASE"; do
+          attempts=$$((attempts + 1))
+          if [ "$$attempts" -ge 30 ]; then
+            echo "Postgres did not become ready in time."
+            exit 1
+          fi
+          echo "Waiting for Postgres before starting backend..."
+          sleep 2
+        done
+
+        attempts=0
+        until psql -tAc "select to_regclass('public.youtube_live_resolutions') is not null" | grep -q t; do
+          attempts=$$((attempts + 1))
+          if [ "$$attempts" -ge 30 ]; then
+            echo "Migrations did not finish in time."
+            exit 1
+          fi
+          echo "Waiting for migrations before starting backend..."
+          sleep 2
+        done
+
+        npm run dev
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  bizeye-front:
+    build:
+      context: ./bizeye-front
+      dockerfile: Dockerfile.dev
+    depends_on:
+      bizeye-back:
+        condition: service_healthy
+    environment:
+      VITE_RESOLVER_BASE_URL: http://localhost:3000
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "5190:5173"
+    volumes:
+      - ./bizeye-front:/app
+      - bizeye_front_node_modules:/app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  bizeye_pg_data:
+  bizeye_back_node_modules:
+  bizeye_front_node_modules:

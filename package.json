@@ -1,31 +1,17 @@
 {
-  "name": "bizeyeauto",
+  "name": "bizeye",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "0.1.0",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@vercel/speed-insights": "^1.3.1",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.39.1",
-    "@types/node": "^24.10.1",
-    "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
-    "eslint": "^9.39.1",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
-    "globals": "^16.5.0",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.48.0",
-    "vite": "^7.3.1"
+    "dev:front": "npm --prefix bizeye-front run dev -- --host 127.0.0.1",
+    "dev:back": "npm --prefix bizeye-back run dev",
+    "build:front": "npm --prefix bizeye-front run build",
+    "build:back": "npm --prefix bizeye-back run build",
+    "lint:front": "npm --prefix bizeye-front run lint",
+    "typecheck:back": "npm --prefix bizeye-back run typecheck",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:migrate": "docker compose run --rm migrate"
   }
 }

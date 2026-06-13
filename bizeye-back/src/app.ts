@@ -1,0 +1,58 @@
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { logger } from 'hono/logger';
+import { requestId } from 'hono/request-id';
+import { secureHeaders } from 'hono/secure-headers';
+import { getOptionalServerEnv } from './config/env';
+import { healthRoutes } from './routes/health';
+import { internalRoutes } from './routes/internal';
+import { youtubeRoutes } from './routes/youtube';
+
+const parseAllowedOrigins = (value: string) => {
+  return value
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+};
+
+export const createApp = () => {
+  const app = new Hono();
+
+  app.use('*', requestId());
+  app.use('*', secureHeaders());
+  app.use('*', logger());
+  app.use(
+    '*',
+    cors({
+      credentials: true,
+      origin: (origin) => {
+        const { BIZEYE_FRONTEND_ORIGIN } = getOptionalServerEnv();
+        const allowedOrigins = parseAllowedOrigins(BIZEYE_FRONTEND_ORIGIN);
+        const fallbackOrigin = allowedOrigins[0] ?? '';
+
+        if (!origin) {
+          return fallbackOrigin;
+        }
+
+        if (allowedOrigins.includes(origin)) {
+          return origin;
+        }
+
+        return '';
+      },
+    }),
+  );
+
+  app.get('/', (c) => {
+    return c.json({
+      service: 'bizeye-back',
+      status: 'ok',
+    });
+  });
+
+  app.route('/', healthRoutes);
+  app.route('/internal', internalRoutes);
+  app.route('/youtube', youtubeRoutes);
+
+  return app;
+};

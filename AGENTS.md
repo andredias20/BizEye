@@ -2,28 +2,64 @@
 
 ## Project
 
-BizEye is a React + TypeScript + Vite app for managing embedded live-stream cards.
+BizEye is organized as a two-project repository:
+
+- `bizeye-front`: React + TypeScript + Vite app for managing embedded live-stream cards.
+- `bizeye-back`: Hono + TypeScript API for resolving YouTube channels/lives, hiding the YouTube API key, and using Supabase Postgres for cache/session/state.
 
 ## Setup
 
 - Use Node.js 20.19+ or 22.12+.
-- Install dependencies with `npm ci`.
-- Worktree setup is automated through `.codex/environments/environment.toml`, which runs `.codex/setup-worktree.ps1`.
+- Frontend dependencies live under `bizeye-front`.
+- Backend dependencies live under `bizeye-back`.
+- Supabase SQL migrations live under `bizeye-back/supabase/migrations`.
 
 ## Common Commands
 
-- Install and validate a fresh worktree: `powershell -NoProfile -ExecutionPolicy Bypass -File .\.codex\setup-worktree.ps1`
-- Start dev server: `npm run dev -- --host 127.0.0.1`
-- Lint: `npm run lint`
-- Build: `npm run build`
-
-## Validation
-
-Before finishing code changes, run:
+Frontend:
 
 ```powershell
+cd .\bizeye-front
+npm ci
+npm run dev -- --host 127.0.0.1
 npm run lint
 npm run build
 ```
 
+Backend:
+
+```powershell
+cd .\bizeye-back
+npm ci
+npm run dev
+npm run build
+```
+
+Root helpers:
+
+```powershell
+npm run dev:front
+npm run dev:back
+npm run build:front
+npm run build:back
+```
+
+## Validation
+
+Before finishing frontend code changes, run:
+
+```powershell
+cd .\bizeye-front
+npm run lint
+npm run build
+```
+
+Before finishing backend code changes, run:
+
+```powershell
+cd .\bizeye-back
+npm run build
+```
+
 For UI changes, also open the Vite URL that the dev server prints and verify the changed flow in a browser.
+

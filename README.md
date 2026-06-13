@@ -2,112 +2,170 @@
 
 ## Português
 
-BizEye é uma aplicação React + TypeScript + Vite para organizar cards de lives em um painel de visualização. A proposta é facilitar o acompanhamento de vários criadores ao mesmo tempo, com uma tela `Watch` dedicada para exibir embeds ativos sem rolagem.
+BizEye é um monorepo para organizar cards de lives no frontend e mover a resolução/cache de dados do YouTube para um backend próprio.
+
+### Estrutura
+
+```text
+BizEye/
+  bizeye-front/  React + TypeScript + Vite
+  bizeye-back/   Hono + TypeScript API
+```
 
 ### Recursos principais
 
 - Dashboard de streams com suporte a YouTube, Twitch e Kick.
-- Página inicial com criadores sugeridos e busca de canais do YouTube.
-- Modal para adicionar canais por URL, handle ou ID.
-- Tela `Watch` com modos de layout para priorizar equilíbrio, largura, altura, mais colunas ou mais linhas.
-- Persistência local das streams e do layout escolhido via `localStorage`.
+- Tela `Watch` para exibir embeds ativos sem rolagem.
+- Backend resolver para busca de canais, cache de resoluções e futuras validações de live.
+- Supabase Postgres como base para cache, sessões administrativas e histórico de chamadas.
+- Docker Compose local com Postgres, migrations, backend e frontend.
 
 ### Requisitos
 
 - Node.js 20.19+ ou 22.12+.
 - npm.
+- Docker Desktop para o ambiente local completo.
 
 ### Configuração local
 
-Instale as dependências:
+Instale as dependências do projeto desejado:
 
 ```powershell
+cd bizeye-front
+npm ci
+
+cd ..\bizeye-back
 npm ci
 ```
 
-Inicie o servidor de desenvolvimento:
+Use os arquivos `.env.example` como referência para criar os `.env.local`. Arquivos locais de ambiente são ignorados pelo Git.
+
+### Docker Compose
+
+Suba a stack completa a partir da raiz:
 
 ```powershell
-npm run dev -- --host 127.0.0.1
+docker compose up --build
 ```
 
-O Vite exibirá a URL local no terminal. Se a porta `5173` já estiver em uso, outra porta disponível será escolhida automaticamente.
+Serviços locais:
 
-Para habilitar a busca de canais do YouTube, configure a variável de ambiente abaixo em um arquivo `.env` local:
+- Frontend: `http://localhost:5190`
+- Backend: `http://localhost:3000`
+- Postgres: `localhost:54322`
+
+O serviço `migrate` aplica as migrations em:
 
 ```text
-VITE_YOUTUBE_API_KEY=sua_chave_aqui
+bizeye-back/supabase/migrations
 ```
 
-### Comandos básicos
+### Comandos
 
 ```powershell
-npm ci                         # instala as dependências
-npm run dev                    # inicia o Vite em modo desenvolvimento
-npm run lint                   # executa o ESLint
-npm run build                  # gera o build de produção
-npm run preview                # abre uma prévia local do build
+npm run dev:front
+npm run dev:back
+npm run build:front
+npm run build:back
 ```
 
-### Validação
+### Deploy
 
-```powershell
-npm run lint
-npm run build
-```
+Use um único repositório GitHub com dois projetos na Vercel:
+
+- Frontend
+  - Root Directory: `bizeye-front`
+  - Build Command: `npm run build`
+  - Output Directory: `dist`
+
+- Backend
+  - Root Directory: `bizeye-back`
+  - Framework: Hono
+  - Banco/cache/sessões: Supabase Postgres
+
+Não commite chaves, tokens, project IDs sensíveis, service-role keys ou `.env.local`.
 
 ## English
 
-BizEye is a React + TypeScript + Vite application for organizing live-stream cards in a viewing dashboard. Its goal is to make it easier to monitor multiple creators at the same time, with a dedicated `Watch` screen for active embeds without scrolling.
+BizEye is a monorepo for organizing live-stream cards in the frontend while moving YouTube resolving/cache work to a dedicated backend.
 
-### Main features
+### Structure
+
+```text
+BizEye/
+  bizeye-front/  React + TypeScript + Vite
+  bizeye-back/   Hono + TypeScript API
+```
+
+### Main Features
 
 - Stream dashboard with YouTube, Twitch, and Kick support.
-- Home page with suggested creators and YouTube channel search.
-- Modal for adding channels by URL, handle, or ID.
-- `Watch` screen with layout modes that prioritize balance, width, height, more columns, or more rows.
-- Local persistence for selected streams and the chosen layout through `localStorage`.
+- `Watch` screen for active embeds without scrolling.
+- Resolver backend for channel search, resolution cache, and future live validation.
+- Supabase Postgres for cache, admin sessions, and API-call history.
+- Local Docker Compose with Postgres, migrations, backend, and frontend.
 
 ### Requirements
 
 - Node.js 20.19+ or 22.12+.
 - npm.
+- Docker Desktop for the full local stack.
 
-### Local setup
+### Local Setup
 
-Install dependencies:
+Install dependencies for the project you want to run:
 
 ```powershell
+cd bizeye-front
+npm ci
+
+cd ..\bizeye-back
 npm ci
 ```
 
-Start the development server:
+Use `.env.example` files as the reference for local `.env.local` files. Local env files are ignored by Git.
+
+### Docker Compose
+
+Start the full stack from the repository root:
 
 ```powershell
-npm run dev -- --host 127.0.0.1
+docker compose up --build
 ```
 
-Vite will print the local URL in the terminal. If port `5173` is already in use, Vite will automatically choose another available port.
+Local services:
 
-To enable YouTube channel search, set the following environment variable in a local `.env` file:
+- Frontend: `http://localhost:5190`
+- Backend: `http://localhost:3000`
+- Postgres: `localhost:54322`
+
+The `migrate` service applies migrations from:
 
 ```text
-VITE_YOUTUBE_API_KEY=your_key_here
+bizeye-back/supabase/migrations
 ```
 
-### Basic commands
+### Commands
 
 ```powershell
-npm ci                         # install dependencies
-npm run dev                    # start Vite in development mode
-npm run lint                   # run ESLint
-npm run build                  # create a production build
-npm run preview                # preview the production build locally
+npm run dev:front
+npm run dev:back
+npm run build:front
+npm run build:back
 ```
 
-### Validation
+### Deploy
 
-```powershell
-npm run lint
-npm run build
-```
+Use one GitHub repository with two Vercel projects:
+
+- Frontend
+  - Root Directory: `bizeye-front`
+  - Build Command: `npm run build`
+  - Output Directory: `dist`
+
+- Backend
+  - Root Directory: `bizeye-back`
+  - Framework: Hono
+  - Database/cache/sessions: Supabase Postgres
+
+Do not commit keys, tokens, sensitive project IDs, service-role keys, or `.env.local`.
