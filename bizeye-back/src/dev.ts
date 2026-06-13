@@ -4,7 +4,7 @@ import { config } from 'dotenv';
 config({ path: '.env.local', override: false });
 config({ path: '.env', override: false });
 
-const { default: app } = await import('./index.js');
+const { default: app } = await import('./server.js');
 
 const port = Number(process.env.PORT ?? 3000);
 
