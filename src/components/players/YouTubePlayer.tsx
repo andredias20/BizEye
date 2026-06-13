@@ -99,7 +99,8 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     onSignalError,
     onMetadata
 }) => {
-    const iframeRef = useRef<HTMLIFrameElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const iframeRef = useRef<HTMLIFrameElement | null>(null);
     const playerRef = useRef<YouTubePlayerInstance | null>(null);
     const isMutedRef = useRef(isMuted);
     const volumeRef = useRef(volume);
@@ -147,6 +148,28 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
         return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${params.toString()}`;
     }, [streamId, currentVideoId, playbackQuality]);
+
+    const createYoutubeIframe = React.useCallback(() => {
+        if (!containerRef.current || !embedUrl) return null;
+
+        containerRef.current.innerHTML = '';
+
+        const iframe = document.createElement('iframe');
+        iframe.src = embedUrl;
+        iframe.width = '100%';
+        iframe.height = '100%';
+        iframe.frameBorder = '0';
+        iframe.allow = 'autoplay; encrypted-media';
+        iframe.allowFullscreen = true;
+        iframe.title = `YouTube Stream ${streamId}`;
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+
+        containerRef.current.appendChild(iframe);
+        iframeRef.current = iframe;
+
+        return iframe;
+    }, [embedUrl, streamId]);
 
     const initYoutubePlayer = React.useCallback(() => {
         if (!iframeRef.current || !window.YT?.Player || playerRef.current) return;
@@ -217,6 +240,8 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     useEffect(() => {
         let isCancelled = false;
 
+        createYoutubeIframe();
+
         const checkYoutubeApi = () => {
             if (isCancelled) return;
             if (window.YT && window.YT.Player) {
@@ -239,14 +264,17 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             if (playerRef.current) {
                 try {
                     playerRef.current.destroy();
-                    playerRef.current = null;
                 } catch (e) {
                     console.error("Error destroying YouTube player:", e);
                 }
+            } else {
+                iframeRef.current?.remove();
             }
+            playerRef.current = null;
+            iframeRef.current = null;
             setIsPlayerReady(false);
         };
-    }, [initYoutubePlayer, streamId]);
+    }, [createYoutubeIframe, initYoutubePlayer]);
 
     useEffect(() => {
         if (isPlayerReady && playerRef.current) {
@@ -262,17 +290,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
     return (
         <div className="player-container youtube-player" style={{ width: '100%', height: '100%', position: 'relative' }}>
-            <iframe
-                ref={iframeRef}
-                src={embedUrl}
-                width="100%"
-                height="100%"
-                frameBorder="0"
-                allow="autoplay; encrypted-media"
-                allowFullScreen
-                title={`YouTube Stream ${streamId}`}
-                style={{ width: '100%', height: '100%' }}
-            />
+            <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
             {/* YouTube Specific Volume Bar */}
             <div className="card-controls bottom permanent">
