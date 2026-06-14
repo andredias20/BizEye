@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import './WatchPage.css';
 import AddStreamButton from '../components/AddStreamButton';
 import StreamDashboard from '../components/StreamDashboard';
@@ -29,6 +30,23 @@ const WatchPage: React.FC<WatchPageProps> = ({
     onRemoveStream,
     streams,
 }) => {
+    const [isFullscreen, setIsFullscreen] = useState(() => (
+        typeof document !== 'undefined' && Boolean(document.fullscreenElement)
+    ));
+
+    useEffect(() => {
+        const syncFullscreenState = () => setIsFullscreen(Boolean(document.fullscreenElement));
+        document.addEventListener('fullscreenchange', syncFullscreenState);
+
+        return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
+    }, []);
+
+    const exitFullscreen = () => {
+        if (document.fullscreenElement && document.exitFullscreen) {
+            void document.exitFullscreen();
+        }
+    };
+
     return (
         <main className="watch-page">
             <div className="watch-toolbar">
@@ -50,6 +68,33 @@ const WatchPage: React.FC<WatchPageProps> = ({
                         </button>
                     ))}
                 </div>
+
+                {isFullscreen && (
+                    <button
+                        aria-label="Sair do fullscreen"
+                        className="watch-exit-fullscreen"
+                        onClick={exitFullscreen}
+                        title="Sair do fullscreen"
+                        type="button"
+                    >
+                        <svg
+                            aria-hidden="true"
+                            fill="none"
+                            height="18"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            viewBox="0 0 24 24"
+                            width="18"
+                        >
+                            <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+                            <path d="M16 3v3a2 2 0 0 0 2 2h3" />
+                            <path d="M8 21v-3a2 2 0 0 0-2-2H3" />
+                            <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
+                        </svg>
+                    </button>
+                )}
             </div>
 
             <StreamDashboard

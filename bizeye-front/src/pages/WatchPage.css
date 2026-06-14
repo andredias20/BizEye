@@ -65,6 +65,26 @@
     background: var(--accent-cyan);
 }
 
+.watch-exit-fullscreen {
+    min-width: 34px;
+    min-height: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.watch-exit-fullscreen:hover,
+.watch-exit-fullscreen:focus-visible {
+    border-color: rgba(34, 211, 238, 0.72);
+    color: var(--accent-cyan);
+    outline: none;
+}
+
 .watch-page:fullscreen {
     width: 100vw;
     height: 100vh;
@@ -77,7 +97,7 @@
     left: 50%;
     z-index: 1200;
     width: auto;
-    max-width: min(560px, calc(100vw - 1rem));
+    max-width: min(620px, calc(100vw - 1rem));
     padding: 0.28rem;
     transform: translateX(-50%);
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -115,6 +135,11 @@
 
 .watch-page:fullscreen .layout-control button.active {
     background: rgba(34, 211, 238, 0.82);
+}
+
+.watch-page:fullscreen .watch-exit-fullscreen {
+    min-width: 30px;
+    min-height: 30px;
 }
 
 .watch-page:fullscreen .stream-grid {

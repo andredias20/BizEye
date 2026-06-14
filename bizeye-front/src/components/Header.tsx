@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './Header.css';
 
 type AppPage = 'firetv' | 'home' | 'watch';
@@ -11,6 +11,17 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ currentPage, streamCount, onAddStream, onNavigate }) => {
+  const [isFullscreen, setIsFullscreen] = useState(() => (
+    typeof document !== 'undefined' && Boolean(document.fullscreenElement)
+  ));
+
+  useEffect(() => {
+    const syncFullscreenState = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', syncFullscreenState);
+
+    return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
+  }, []);
+
   const getFullscreenTarget = () => {
     if (currentPage === 'watch') {
       return document.querySelector<HTMLElement>('.watch-page') || document.documentElement;
@@ -77,9 +88,24 @@ const Header: React.FC<HeaderProps> = ({ currentPage, streamCount, onAddStream, 
           <span aria-hidden="true">+</span>
           <span className="header-action-text">Creator</span>
         </button>
-        <button className="icon-btn" onClick={toggleFullscreen} title="Toggle Fullscreen">
+        <button
+          aria-label={isFullscreen ? 'Sair do fullscreen' : 'Entrar em fullscreen'}
+          className="icon-btn"
+          onClick={toggleFullscreen}
+          title={isFullscreen ? 'Sair do fullscreen' : 'Entrar em fullscreen'}
+          type="button"
+        >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+            {isFullscreen ? (
+              <>
+                <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+                <path d="M16 3v3a2 2 0 0 0 2 2h3" />
+                <path d="M8 21v-3a2 2 0 0 0-2-2H3" />
+                <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
+              </>
+            ) : (
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+            )}
           </svg>
         </button>
       </div>
