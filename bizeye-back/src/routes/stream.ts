@@ -8,6 +8,7 @@ export const streamRoutes = new Hono();
 const streamPlatformSchema = z.enum(['kick', 'twitch', 'youtube']);
 
 const streamChatSourceSchema = z.object({
+  chatIdentifier: z.string().trim().min(1).optional(),
   identifier: z.string().trim().min(1),
   platform: streamPlatformSchema,
   title: z.string().trim().min(1).optional(),

@@ -8,8 +8,14 @@ import type {
 } from './streamChat.js';
 
 const DEFAULT_POLL_MS = 5_000;
+const DEFAULT_KICK_ACCEPT_LANGUAGE = 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7';
+const DEFAULT_KICK_SEC_CH_UA = '"Google Chrome";v="149", "Chromium";v="149", "Not)A;Brand";v="24"';
+const DEFAULT_KICK_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36';
 const KICK_PUSHER_APP_KEY = process.env.KICK_PUSHER_APP_KEY || '32cbd69e4b950bf97679';
 const KICK_PUSHER_URL = `wss://ws-us2.pusher.com/app/${KICK_PUSHER_APP_KEY}?protocol=7&client=js&version=8.4.0&flash=false`;
+
+type KickHttpProfile = 'browser-fetch' | 'browser-navigation';
 
 type KickChatContext = {
   maxResults: number;
@@ -87,6 +93,43 @@ const sourceStateFromError = (source: StreamChatSourceInput, error: unknown) => 
 
 const isMockMode = () => getKickChatMode() === 'mock';
 
+const getEnvValue = (name: string, fallback: string) => process.env[name]?.trim() || fallback;
+
+const getKickBrowserHeaders = (profile: KickHttpProfile): Record<string, string> => {
+  const headers: Record<string, string> = {
+    'accept-language': getEnvValue('KICK_ACCEPT_LANGUAGE', DEFAULT_KICK_ACCEPT_LANGUAGE),
+    'cache-control': 'no-cache',
+    pragma: 'no-cache',
+    'sec-ch-ua': getEnvValue('KICK_SEC_CH_UA', DEFAULT_KICK_SEC_CH_UA),
+    'sec-ch-ua-mobile': getEnvValue('KICK_SEC_CH_UA_MOBILE', '?0'),
+    'sec-ch-ua-platform': getEnvValue('KICK_SEC_CH_UA_PLATFORM', '"Windows"'),
+    'user-agent': getEnvValue('KICK_USER_AGENT', DEFAULT_KICK_USER_AGENT),
+  };
+
+  if (profile === 'browser-navigation') {
+    return {
+      ...headers,
+      accept:
+        'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+      'sec-fetch-dest': 'document',
+      'sec-fetch-mode': 'navigate',
+      'sec-fetch-site': 'none',
+      'sec-fetch-user': '?1',
+      'upgrade-insecure-requests': '1',
+    };
+  }
+
+  return {
+    ...headers,
+    accept: 'application/json,text/plain,*/*',
+    origin: 'https://kick.com',
+    referer: 'https://kick.com/',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-site',
+  };
+};
+
 const normalizeKickIdentifier = (value: string) => {
   const trimmed = value.trim();
   const withoutUrl = trimmed.replace(/^https?:\/\/(?:www\.)?kick\.com\//i, '');
@@ -157,10 +200,7 @@ const parsePusherMessage = (raw: RawData) => {
 
 const fetchJson = async (url: string) => {
   const response = await fetch(url, {
-    headers: {
-      accept: 'application/json',
-      'user-agent': 'BizEye/0.1 (+https://bizeye.local)',
-    },
+    headers: getKickBrowserHeaders('browser-fetch'),
   });
 
   return {
@@ -170,6 +210,12 @@ const fetchJson = async (url: string) => {
 };
 
 const getString = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : null);
+
+const getScalarString = (value: unknown) => {
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return null;
+};
 
 const getSender = (payload: Record<string, unknown>) => {
   const sender = payload.sender ?? payload.user;
@@ -286,7 +332,8 @@ const resolveKickPrivateChannelFallback = async (
 };
 
 const resolveKickChatroom = async (source: StreamChatSourceInput): Promise<KickChatroomResolution> => {
-  const directChatroomId = getDirectChatroomId(source.identifier);
+  const chatIdentifier = source.chatIdentifier?.trim();
+  const directChatroomId = chatIdentifier ? getDirectChatroomId(chatIdentifier) : getDirectChatroomId(source.identifier);
   if (directChatroomId) return { chatroomId: directChatroomId, title: source.title };
 
   const chatroomOverride = getChatroomOverride(source.identifier);
@@ -300,10 +347,7 @@ const resolveKickChatroom = async (source: StreamChatSourceInput): Promise<KickC
 
   const slug = normalizeKickIdentifier(source.identifier);
   const response = await fetch(`https://kick.com/api/v2/channels/${encodeURIComponent(slug)}`, {
-    headers: {
-      accept: 'application/json',
-      'user-agent': 'BizEye/0.1 (+https://bizeye.local)',
-    },
+    headers: getKickBrowserHeaders('browser-navigation'),
   });
 
   if (!response.ok) {
@@ -318,7 +362,7 @@ const resolveKickChatroom = async (source: StreamChatSourceInput): Promise<KickC
   const chatroom = data.chatroom && typeof data.chatroom === 'object'
     ? (data.chatroom as Record<string, unknown>)
     : {};
-  const chatroomId = getString(chatroom.id) ?? getString(data.chatroom_id);
+  const chatroomId = getScalarString(chatroom.id) ?? getScalarString(data.chatroom_id);
   const user = data.user && typeof data.user === 'object' ? (data.user as Record<string, unknown>) : {};
 
   if (!chatroomId) throw new KickSourceStateError('kick_chatroom_not_found', 'not_found', source.title);

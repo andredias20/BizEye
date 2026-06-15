@@ -29,6 +29,8 @@ DATABASE_URL=postgresql://bizeye:bizeye_dev_password@localhost:54322/bizeye
 YOUTUBE_API_MODE=mock
 KICK_CHAT_MODE=mock
 KICK_CHATROOM_OVERRIDES=
+KICK_USER_AGENT=
+KICK_ACCEPT_LANGUAGE=
 ```
 
 Start only Postgres and migrations from the repository root:
@@ -118,6 +120,9 @@ SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 YOUTUBE_API_MODE=live
 KICK_CHAT_MODE=live
+KICK_CHATROOM_OVERRIDES=
+KICK_USER_AGENT=
+KICK_ACCEPT_LANGUAGE=
 YOUTUBE_API_KEY=
 ```
 
@@ -153,7 +158,7 @@ Use `SUPABASE_SERVICE_ROLE_KEY` only in this backend. Never expose it to `bizeye
 
 ## Merged Stream Chat
 
-The generic chat merge flow receives sources with `platform` and `identifier`. YouTube uses the live `videoId` as the identifier. Kick accepts a channel slug/URL or direct numeric chatroom id; in `KICK_CHAT_MODE=live` it resolves the public channel chatroom and subscribes to Kick's public Pusher channel best-effort. If Kick blocks the public `slug -> chatroom_id` lookup, use `KICK_CHATROOM_OVERRIDES=slug:123,other_slug:456` or add a Kick card as `username|chatroomId`. Twitch is accepted by the contract, but still returns `unsupported` until a dedicated adapter is added.
+The generic chat merge flow receives sources with `platform` and `identifier`. YouTube uses the live `videoId` as the identifier. Kick uses the channel slug as `identifier` and may also receive `chatIdentifier: "chatroom:123"` from the frontend when the browser can read Kick's public channel payload. If `chatIdentifier` is absent, Kick accepts a channel slug/URL or direct numeric chatroom id; in `KICK_CHAT_MODE=live` it resolves the public channel chatroom and subscribes to Kick's public Pusher channel best-effort. The Kick resolver sends non-sensitive browser-style headers (`User-Agent`, `Accept`, `Accept-Language`, and `Sec-*`) and supports optional `KICK_USER_AGENT`, `KICK_ACCEPT_LANGUAGE`, `KICK_SEC_CH_UA`, and `KICK_SEC_CH_UA_PLATFORM` overrides for production testing. Do not configure cookies or Cloudflare tokens in backend env vars. If Kick still blocks the public `slug -> chatroom_id` lookup, use `KICK_CHATROOM_OVERRIDES=slug:123,other_slug:456` or add a Kick card as `username|chatroomId`. Twitch is accepted by the contract, but still returns `unsupported` until a dedicated adapter is added.
 
 Snapshot/polling test:
 
@@ -179,7 +184,7 @@ WebSocket test payload:
   "payload": {
     "sources": [
       { "platform": "youtube", "identifier": "acfLive0001", "title": "ACF" },
-      { "platform": "kick", "identifier": "gaules", "title": "Gaules Kick" }
+      { "platform": "kick", "identifier": "gaules", "chatIdentifier": "chatroom:12345", "title": "Gaules Kick" }
     ],
     "maxResults": 1
   }
