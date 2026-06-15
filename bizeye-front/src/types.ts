@@ -14,6 +14,7 @@ export type ViewLayoutMode =
     | 'height-guided';
 
 export interface Stream {
+    chatIdentifier?: string;
     id: string;
     liveStatus?: 'live' | 'offline' | 'unknown' | 'error' | 'quota_limited';
     platform: Platform;

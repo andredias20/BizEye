@@ -6,7 +6,7 @@ import './AddStreamModal.css';
 interface AddStreamModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAdd: (id: string, platform: Platform, title?: string) => void;
+    onAdd: (id: string, platform: Platform, title?: string, chatIdentifier?: string) => void;
 }
 
 const getErrorMessage = (err: unknown) => {
@@ -28,6 +28,7 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
 
         try {
             let id = inputValue.trim();
+            let chatIdentifier: string | undefined;
             let title = id;
             if (!id) throw new Error('Please enter a link or ID');
 
@@ -46,11 +47,20 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
                         id = id.split('/').pop() || id;
                     }
                 }
+
+                if (platform === 'kick') {
+                    const explicitChatroom = id.match(/^(.+?)(?:\||\s+chatroom:)(\d+)$/i);
+                    if (explicitChatroom) {
+                        id = explicitChatroom[1]?.trim() || id;
+                        chatIdentifier = `chatroom:${explicitChatroom[2]}`;
+                    }
+                }
+
                 title = id;
             }
 
             console.log(`Adding ${platform} stream: ${id} (${title})`);
-            onAdd(id, platform, title || id);
+            onAdd(id, platform, title || id, chatIdentifier);
             onClose();
             setInputValue('');
         } catch (err: unknown) {
@@ -95,7 +105,7 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
                         <label>
                             {platform === 'youtube' ? 'Channel URL, ID ou Handle (@...)' :
                                 platform === 'twitch' ? 'Twitch username ou link' :
-                                    'Kick username ou link'}
+                                    'Kick username, link ou username|chatroomId'}
                         </label>
                         <input
                             type="text"

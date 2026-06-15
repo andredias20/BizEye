@@ -27,6 +27,9 @@ const normalizeStream = (value: unknown): Stream | null => {
     const title = typeof candidate.title === 'string' && candidate.title.trim()
         ? candidate.title.trim()
         : undefined;
+    const chatIdentifier = typeof candidate.chatIdentifier === 'string' && candidate.chatIdentifier.trim()
+        ? candidate.chatIdentifier.trim()
+        : undefined;
     const videoId = typeof candidate.videoId === 'string' && candidate.videoId.trim()
         ? candidate.videoId.trim()
         : undefined;
@@ -35,6 +38,7 @@ const normalizeStream = (value: unknown): Stream | null => {
         : undefined;
 
     return {
+        chatIdentifier,
         id,
         liveStatus,
         platform: platform as Platform,
