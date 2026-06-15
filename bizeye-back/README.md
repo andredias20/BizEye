@@ -27,6 +27,7 @@ The default `.env.example` is prepared for local work:
 BIZEYE_DB_DRIVER=postgres
 DATABASE_URL=postgresql://bizeye:bizeye_dev_password@localhost:54322/bizeye
 YOUTUBE_API_MODE=mock
+KICK_CHAT_MODE=mock
 ```
 
 Start only Postgres and migrations from the repository root:
@@ -62,7 +63,8 @@ This starts:
 - `bizeye-back`: Hono API on `http://localhost:3000`
 - `bizeye-front`: Vite app on `http://localhost:5190`
 
-The Compose stack uses `BIZEYE_DB_DRIVER=postgres`, `YOUTUBE_API_MODE=mock`, and `VITE_FEATURE_BIZEYE_RESOLVE=true`, so it runs without Supabase service keys or a real YouTube API key.
+The Compose stack uses `BIZEYE_DB_DRIVER=postgres`, `YOUTUBE_API_MODE=mock`, `KICK_CHAT_MODE=mock`, and `VITE_FEATURE_BIZEYE_RESOLVE=true`, so it runs without Supabase service keys or a real YouTube API key.
+The mock YouTube mode also includes deterministic live chat fixtures for testing merged chats from multiple live video IDs.
 
 Run migrations manually:
 
@@ -104,6 +106,7 @@ Local/Codex:
 BIZEYE_DB_DRIVER=postgres
 DATABASE_URL=postgresql://bizeye:bizeye_dev_password@localhost:54322/bizeye
 YOUTUBE_API_MODE=mock
+KICK_CHAT_MODE=mock
 ```
 
 Production/Vercel:
@@ -113,6 +116,7 @@ BIZEYE_DB_DRIVER=supabase
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 YOUTUBE_API_MODE=live
+KICK_CHAT_MODE=live
 YOUTUBE_API_KEY=
 ```
 
@@ -140,3 +144,51 @@ Use `SUPABASE_SERVICE_ROLE_KEY` only in this backend. Never expose it to `bizeye
 - `POST /youtube/channels/live-status`
 - `GET /youtube/channels/:channelId/live`
 - `POST /youtube/channels/:channelId/live`
+- `POST /stream/chat/merge`
+- `GET /stream/chat/merge/stream?sources=...`
+- `GET /stream/chat/merge/ws`
+- `POST /youtube/chats/merge`
+- `GET /youtube/chats/merge/stream?videoIds=acfLive0001,tonimec0001`
+
+## Merged Stream Chat
+
+The generic chat merge flow receives sources with `platform` and `identifier`. YouTube uses the live `videoId` as the identifier. Kick accepts a channel slug/URL or direct numeric chatroom id; in `KICK_CHAT_MODE=live` it resolves the public channel chatroom and subscribes to Kick's public Pusher channel best-effort. Twitch is accepted by the contract, but still returns `unsupported` until a dedicated adapter is added.
+
+Snapshot/polling test:
+
+```powershell
+Invoke-RestMethod http://localhost:3000/stream/chat/merge `
+  -Method Post `
+  -ContentType 'application/json' `
+  -Body '{"sources":[{"platform":"youtube","identifier":"acfLive0001"},{"platform":"kick","identifier":"gaules"}],"maxResults":1}'
+```
+
+SSE test:
+
+```powershell
+$sources = [uri]::EscapeDataString('[{"platform":"youtube","identifier":"acfLive0001","title":"ACF"},{"platform":"kick","identifier":"gaules","title":"Gaules Kick"}]')
+Invoke-WebRequest "http://localhost:3000/stream/chat/merge/stream?once=1&sources=$sources"
+```
+
+WebSocket test payload:
+
+```json
+{
+  "type": "subscribe",
+  "payload": {
+    "sources": [
+      { "platform": "youtube", "identifier": "acfLive0001", "title": "ACF" },
+      { "platform": "kick", "identifier": "gaules", "title": "Gaules Kick" }
+    ],
+    "maxResults": 1
+  }
+}
+```
+
+The SSE route is available at `/stream/chat/merge/stream` and is the default frontend transport for Vercel compatibility. The WebSocket route is available in the local Node backend at `/stream/chat/merge/ws`. Vercel Functions do not host WebSocket servers directly, so production should keep SSE or use a realtime provider/dedicated process for WebSocket-style realtime.
+
+Focused test suite:
+
+```powershell
+npm run test:chat
+```

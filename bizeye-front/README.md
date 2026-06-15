@@ -18,12 +18,16 @@ Vite prints the local URL in the terminal. If another worktree is already using 
 
 ## Feature Flags
 
-The frontend reads the Vercel boolean flag `bizeye-resolve` through the serverless endpoint `api/flags.ts`.
+The frontend reads Vercel flags through the serverless endpoint `api/flags.ts`.
 
 - `bizeye-resolve=true`: YouTube channel search, channel resolution, and live lookup use `VITE_RESOLVER_BASE_URL`.
 - `bizeye-resolve=false`: those flows fall back to direct Google APIs through `VITE_YOUTUBE_API_KEY`.
+- `bizeye-chat-merge=true`: Watch opens the merged chat panel for streams with chat identifiers.
+- `bizeye-chat-merge=false`: the merged chat panel stays hidden.
+- `bizeye-chat-transport=sse`: Watch uses `EventSource` against `/stream/chat/merge/stream`.
+- `bizeye-chat-transport=websocket`: Watch uses the local WebSocket route `/stream/chat/merge/ws`.
 - Local Vite dev uses `VITE_FEATURE_BIZEYE_RESOLVE` as the fallback value because Vite does not run Vercel Functions.
-- For local testing, override the value in the browser with `localStorage.setItem('bizeye-resolve', 'true')` or remove the key to use the environment/default value again.
+- For local testing, override the values in the browser with `localStorage.setItem('bizeye-resolve', 'true')`, `localStorage.setItem('bizeye-chat-merge', 'true')`, and `localStorage.setItem('bizeye-chat-transport', 'websocket')`, or remove the keys to use the environment/default values again.
 
 ## YouTube Live Resolution
 
@@ -33,6 +37,7 @@ The base Watch list is fixed to ACF, Tonimec, and EEBrasil. On page load/F5, the
 - Expired live cache is validated by the backend before being reused.
 - If there is no usable cache, the player first tries the `live_stream?channel=` embed and records a discovered `videoId` when the IFrame API exposes one.
 - If the channel embed fails, the backend falls back to YouTube API discovery and returns the active `videoId`.
+- When chat merge is enabled, the Watch page sends `{ platform, identifier }` sources to `/stream/chat/merge/stream` or `/stream/chat/merge/ws`, according to `bizeye-chat-transport`, and renders individual chat messages from the backend queue.
 
 ## Codex Worktrees
 

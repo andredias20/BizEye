@@ -91,6 +91,7 @@ services:
       PGPASSWORD: bizeye_dev_password
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
       YOUTUBE_API_MODE: ${YOUTUBE_API_MODE:-mock}
+      KICK_CHAT_MODE: ${KICK_CHAT_MODE:-mock}
       BIZEYE_FRONTEND_ORIGIN: http://localhost:5190
       SESSION_COOKIE_NAME: bizeye_admin_session
       CRON_SECRET: local-cron-secret
@@ -156,6 +157,8 @@ services:
         condition: service_healthy
     environment:
       VITE_RESOLVER_BASE_URL: http://localhost:3000
+      VITE_FEATURE_BIZEYE_CHAT_MERGE: ${VITE_FEATURE_BIZEYE_CHAT_MERGE:-true}
+      VITE_FEATURE_BIZEYE_CHAT_TRANSPORT: ${VITE_FEATURE_BIZEYE_CHAT_TRANSPORT:-sse}
       VITE_FEATURE_BIZEYE_RESOLVE: "true"
       CHOKIDAR_USEPOLLING: "true"
     ports:

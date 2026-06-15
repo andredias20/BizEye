@@ -6,6 +6,7 @@ import { secureHeaders } from 'hono/secure-headers';
 import { getOptionalServerEnv } from './config/env.js';
 import { healthRoutes } from './routes/health.js';
 import { internalRoutes } from './routes/internal.js';
+import { streamRoutes } from './routes/stream.js';
 import { youtubeRoutes } from './routes/youtube.js';
 
 const parseAllowedOrigins = (value: string) => {
@@ -17,31 +18,34 @@ const parseAllowedOrigins = (value: string) => {
 
 export const createApp = () => {
   const app = new Hono();
+  const requestIdMiddleware = requestId();
+  const secureHeadersMiddleware = secureHeaders();
+  const loggerMiddleware = logger();
+  const corsMiddleware = cors({
+    credentials: true,
+    origin: (origin) => {
+      const { BIZEYE_FRONTEND_ORIGIN } = getOptionalServerEnv();
+      const allowedOrigins = parseAllowedOrigins(BIZEYE_FRONTEND_ORIGIN);
+      const fallbackOrigin = allowedOrigins[0] ?? '';
 
-  app.use('*', requestId());
-  app.use('*', secureHeaders());
-  app.use('*', logger());
-  app.use(
-    '*',
-    cors({
-      credentials: true,
-      origin: (origin) => {
-        const { BIZEYE_FRONTEND_ORIGIN } = getOptionalServerEnv();
-        const allowedOrigins = parseAllowedOrigins(BIZEYE_FRONTEND_ORIGIN);
-        const fallbackOrigin = allowedOrigins[0] ?? '';
+      if (!origin) {
+        return fallbackOrigin;
+      }
 
-        if (!origin) {
-          return fallbackOrigin;
-        }
+      if (allowedOrigins.includes(origin)) {
+        return origin;
+      }
 
-        if (allowedOrigins.includes(origin)) {
-          return origin;
-        }
+      return '';
+    },
+  });
 
-        return '';
-      },
-    }),
-  );
+  const isWebSocketRoute = (path: string) => path === '/stream/chat/merge/ws';
+
+  app.use('*', (c, next) => (isWebSocketRoute(c.req.path) ? next() : requestIdMiddleware(c, next)));
+  app.use('*', (c, next) => (isWebSocketRoute(c.req.path) ? next() : secureHeadersMiddleware(c, next)));
+  app.use('*', (c, next) => (isWebSocketRoute(c.req.path) ? next() : loggerMiddleware(c, next)));
+  app.use('*', (c, next) => (isWebSocketRoute(c.req.path) ? next() : corsMiddleware(c, next)));
 
   app.get('/', (c) => {
     return c.json({
@@ -52,6 +56,7 @@ export const createApp = () => {
 
   app.route('/', healthRoutes);
   app.route('/internal', internalRoutes);
+  app.route('/stream', streamRoutes);
   app.route('/youtube', youtubeRoutes);
 
   return app;

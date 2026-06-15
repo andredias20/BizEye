@@ -2,6 +2,7 @@ import type { YouTubeRequestOptions } from './youtube.js';
 
 type MockChannel = {
   channelId: string;
+  chatMessages: MockChatMessage[];
   description: string;
   handle: string;
   liveTitle: string;
@@ -10,9 +11,36 @@ type MockChannel = {
   videoId: string;
 };
 
+type MockChatMessage = {
+  authorName: string;
+  id: string;
+  message: string;
+  publishedAt: string;
+};
+
 const mockChannels: MockChannel[] = [
   {
     channelId: 'UCvgSmIdI92W4KnP15fJwfwA',
+    chatMessages: [
+      {
+        authorName: 'Ana ACF',
+        id: 'acf-chat-001',
+        message: 'ACF abriu a live.',
+        publishedAt: '2026-06-14T21:00:00.000Z',
+      },
+      {
+        authorName: 'Bruno ACF',
+        id: 'acf-chat-002',
+        message: 'Audio e video ok por aqui.',
+        publishedAt: '2026-06-14T21:00:04.000Z',
+      },
+      {
+        authorName: 'Carla ACF',
+        id: 'acf-chat-003',
+        message: 'Entrando no monitoramento.',
+        publishedAt: '2026-06-14T21:00:09.000Z',
+      },
+    ],
     description: 'Canal ACF usado como fixture local do BizEye.',
     handle: '@acf',
     liveTitle: 'ACF - live fixture local',
@@ -22,6 +50,26 @@ const mockChannels: MockChannel[] = [
   },
   {
     channelId: 'UCwRM1SXROyxSSJqrOTQzILw',
+    chatMessages: [
+      {
+        authorName: 'Toni Viewer',
+        id: 'tonimec-chat-001',
+        message: 'Tonimec tambem esta ao vivo.',
+        publishedAt: '2026-06-14T21:00:02.000Z',
+      },
+      {
+        authorName: 'Mec Ops',
+        id: 'tonimec-chat-002',
+        message: 'Teste de chat paralelo.',
+        publishedAt: '2026-06-14T21:00:06.000Z',
+      },
+      {
+        authorName: 'Nina Mec',
+        id: 'tonimec-chat-003',
+        message: 'Mensagem chegando pelo segundo card.',
+        publishedAt: '2026-06-14T21:00:11.000Z',
+      },
+    ],
     description: 'Canal Tonimec usado como fixture local do BizEye.',
     handle: '@tonimec',
     liveTitle: 'Tonimec - live fixture local',
@@ -31,6 +79,20 @@ const mockChannels: MockChannel[] = [
   },
   {
     channelId: 'UCP9uupJdJnpOEJzTtigLPOg',
+    chatMessages: [
+      {
+        authorName: 'Edu Viewer',
+        id: 'eebrasil-chat-001',
+        message: 'EEBrasil fixture online.',
+        publishedAt: '2026-06-14T21:00:03.000Z',
+      },
+      {
+        authorName: 'Monitor EEB',
+        id: 'eebrasil-chat-002',
+        message: 'Chat sendo consumido pelo backend.',
+        publishedAt: '2026-06-14T21:00:08.000Z',
+      },
+    ],
     description: 'Canal EEBrasil usado como fixture local do BizEye.',
     handle: '@enriedu',
     liveTitle: 'EEBrasil - live fixture local',
@@ -40,6 +102,14 @@ const mockChannels: MockChannel[] = [
   },
   {
     channelId: 'UCZiYbVptd3PVPf4f6eR6UaQ',
+    chatMessages: [
+      {
+        authorName: 'Caze Viewer',
+        id: 'cazetv-chat-001',
+        message: 'CazeTV fixture no ar.',
+        publishedAt: '2026-06-14T21:00:05.000Z',
+      },
+    ],
     description: 'Canal CazeTV usado como fixture local do BizEye.',
     handle: '@CazeTV',
     liveTitle: 'CazeTV - live fixture local',
@@ -62,6 +132,18 @@ const findChannel = (value: unknown) => {
       channel.title.toLowerCase(),
     ].includes(query),
   );
+};
+
+const findChannelByVideoId = (value: unknown) => {
+  const videoId = normalizeQuery(value);
+
+  return mockChannels.find((channel) => channel.videoId.toLowerCase() === videoId);
+};
+
+const findChannelByChatId = (value: unknown) => {
+  const liveChatId = normalizeQuery(value);
+
+  return mockChannels.find((channel) => `chat-${channel.videoId}`.toLowerCase() === liveChatId);
 };
 
 const findChannels = (value: unknown) => {
@@ -141,6 +223,7 @@ export const getMockYouTubeResponse = <T>({ path, params }: YouTubeRequestOption
       .map((channel) => ({
         id: channel.videoId,
         liveStreamingDetails: {
+          activeLiveChatId: `chat-${channel.videoId}`,
           actualStartTime: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
         },
         snippet: {
@@ -153,6 +236,39 @@ export const getMockYouTubeResponse = <T>({ path, params }: YouTubeRequestOption
       }));
 
     return { items } as T;
+  }
+
+  if (path === '/liveChat/messages') {
+    const channel = findChannelByChatId(params.liveChatId) ?? findChannelByVideoId(params.liveChatId);
+    const offset = Number(String(params.pageToken ?? '0').replace(/^mock:/, ''));
+    const maxResults = Math.max(1, Number(params.maxResults ?? 200));
+    const messages = channel?.chatMessages ?? [];
+    const page = messages.slice(Number.isFinite(offset) ? offset : 0, (Number.isFinite(offset) ? offset : 0) + maxResults);
+    const nextOffset = (Number.isFinite(offset) ? offset : 0) + page.length;
+
+    return {
+      items: page.map((message) => ({
+        authorDetails: {
+          channelId: `mock-author-${message.authorName.toLowerCase().replace(/\W+/g, '-')}`,
+          displayName: message.authorName,
+          isChatModerator: false,
+          isChatOwner: false,
+          isChatSponsor: false,
+          profileImageUrl: 'https://i.ytimg.com/vi/mock-avatar/default.jpg',
+        },
+        id: message.id,
+        snippet: {
+          displayMessage: message.message,
+          publishedAt: message.publishedAt,
+          textMessageDetails: {
+            messageText: message.message,
+          },
+          type: 'textMessageEvent',
+        },
+      })),
+      nextPageToken: nextOffset < messages.length ? `mock:${nextOffset}` : `mock:${messages.length}`,
+      pollingIntervalMillis: 500,
+    } as T;
   }
 
   return { items: [] } as T;

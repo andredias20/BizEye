@@ -5,6 +5,11 @@ import {
   resolveLiveStatuses,
   resolveLiveForChannel,
 } from '../services/youtubeLiveResolver.js';
+import {
+  fetchMergedYouTubeLiveChat,
+  getMergedChatNextPollMs,
+  type YouTubeChatSourceInput,
+} from '../services/youtubeLiveChat.js';
 import { fetchYouTubeJson } from '../services/youtube.js';
 
 export const youtubeRoutes = new Hono();
@@ -47,8 +52,60 @@ const liveObservationSchema = z.object({
   videoId: z.string().trim().regex(/^[a-zA-Z0-9_-]{11}$/),
 });
 
+const chatSourceSchema = z.object({
+  liveChatId: z.string().trim().min(1).optional(),
+  pageToken: z.string().trim().min(1).optional(),
+  title: z.string().trim().min(1).optional(),
+  videoId: z.string().trim().regex(/^[a-zA-Z0-9_-]{11}$/),
+});
+
+const chatMergeSchema = z
+  .object({
+    maxResults: z.number().int().min(1).max(2000).optional(),
+    sources: z.array(chatSourceSchema).min(1).max(6).optional(),
+    videoIds: z.array(z.string().trim().regex(/^[a-zA-Z0-9_-]{11}$/)).min(1).max(6).optional(),
+  })
+  .refine((value) => Boolean(value.sources?.length || value.videoIds?.length));
+
+const streamQuerySchema = z.object({
+  maxResults: z.coerce.number().int().min(1).max(2000).optional(),
+  once: z
+    .string()
+    .optional()
+    .transform((value) => value === '1' || value === 'true'),
+  pollMs: z.coerce.number().int().min(500).max(30_000).optional(),
+  videoIds: z
+    .string()
+    .transform((value) => value.split(',').map((item) => item.trim()).filter(Boolean))
+    .pipe(z.array(z.string().regex(/^[a-zA-Z0-9_-]{11}$/)).min(1).max(6)),
+});
+
 const getErrorMessage = (error: unknown) => {
   return error instanceof Error ? error.message : 'Unexpected YouTube resolver error';
+};
+
+const toChatSources = (input: z.infer<typeof chatMergeSchema>): YouTubeChatSourceInput[] => {
+  return input.sources ?? input.videoIds?.map((videoId) => ({ videoId })) ?? [];
+};
+
+const encodeSse = (event: string, data: unknown) => {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+};
+
+const waitFor = async (milliseconds: number, signal: AbortSignal) => {
+  if (signal.aborted) return;
+
+  await new Promise<void>((resolve) => {
+    const timeout = setTimeout(resolve, milliseconds);
+    signal.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timeout);
+        resolve();
+      },
+      { once: true },
+    );
+  });
 };
 
 const extractDirectYoutubeId = (input: string) => {
@@ -210,6 +267,88 @@ youtubeRoutes.post('/channels/live-status', async (c) => {
   } catch (error) {
     return c.json({ error: 'youtube_live_status_failed', message: getErrorMessage(error) }, 502);
   }
+});
+
+youtubeRoutes.post('/chats/merge', async (c) => {
+  const parsed = chatMergeSchema.safeParse(await c.req.json().catch(() => null));
+
+  if (!parsed.success) {
+    return c.json({ error: 'invalid_chat_merge_input' }, 400);
+  }
+
+  try {
+    const batch = await fetchMergedYouTubeLiveChat({
+      maxResults: parsed.data.maxResults,
+      sources: toChatSources(parsed.data),
+    });
+
+    return c.json(batch);
+  } catch (error) {
+    return c.json({ error: 'youtube_chat_merge_failed', message: getErrorMessage(error) }, 502);
+  }
+});
+
+youtubeRoutes.get('/chats/merge/stream', (c) => {
+  const parsed = streamQuerySchema.safeParse({
+    maxResults: c.req.query('maxResults'),
+    once: c.req.query('once'),
+    pollMs: c.req.query('pollMs'),
+    videoIds: c.req.query('videoIds'),
+  });
+
+  if (!parsed.success) {
+    return c.json({ error: 'invalid_chat_stream_query' }, 400);
+  }
+
+  const encoder = new TextEncoder();
+  const signal = c.req.raw.signal;
+  let sources: YouTubeChatSourceInput[] = parsed.data.videoIds.map((videoId) => ({ videoId }));
+
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        while (!signal.aborted) {
+          const batch = await fetchMergedYouTubeLiveChat({
+            maxResults: parsed.data.maxResults,
+            sources,
+          });
+
+          controller.enqueue(encoder.encode(encodeSse('chat-batch', batch)));
+
+          sources = batch.sources.map((source) => ({
+            liveChatId: source.liveChatId,
+            pageToken: source.nextPageToken,
+            title: source.title,
+            videoId: source.videoId,
+          }));
+
+          if (parsed.data.once) break;
+
+          await waitFor(parsed.data.pollMs ?? getMergedChatNextPollMs(batch), signal);
+        }
+      } catch (error) {
+        controller.enqueue(
+          encoder.encode(
+            encodeSse('chat-error', {
+              error: 'youtube_chat_stream_failed',
+              message: getErrorMessage(error),
+            }),
+          ),
+        );
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'cache-control': 'no-cache, no-transform',
+      connection: 'keep-alive',
+      'content-type': 'text/event-stream; charset=utf-8',
+      'x-accel-buffering': 'no',
+    },
+  });
 });
 
 youtubeRoutes.get('/channels/:channelId/live', async (c) => {

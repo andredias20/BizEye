@@ -37,7 +37,19 @@
     font-size: 0.95rem;
 }
 
-.layout-control {
+.watch-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    overflow: hidden;
+}
+
+.watch-body .stream-grid {
+    flex: 1 1 auto;
+}
+
+.layout-control,
+.chat-position-control {
     display: flex;
     gap: 0.3rem;
     padding: 0.25rem;
@@ -47,7 +59,8 @@
     overflow-x: auto;
 }
 
-.layout-control button {
+.layout-control button,
+.chat-position-control button {
     min-width: 68px;
     min-height: 34px;
     border: 0;
@@ -60,9 +73,39 @@
     white-space: nowrap;
 }
 
-.layout-control button.active {
+.chat-position-control button {
+    min-width: 54px;
+}
+
+.layout-control button.active,
+.chat-position-control button.active {
     color: #021010;
     background: var(--accent-cyan);
+}
+
+.watch-body--chat-left {
+    flex-direction: row-reverse;
+}
+
+.watch-body--chat-right {
+    flex-direction: row;
+}
+
+.watch-body--chat-bottom {
+    flex-direction: column;
+}
+
+.watch-body--chat-bottom .merged-chat-panel {
+    width: 100%;
+    max-height: 34vh;
+    min-width: 0;
+    border-top: 1px solid var(--border-soft);
+    border-left: 0;
+}
+
+.watch-body--chat-left .merged-chat-panel {
+    border-right: 1px solid var(--border-soft);
+    border-left: 0;
 }
 
 .watch-exit-fullscreen {
@@ -119,14 +162,16 @@
     display: none;
 }
 
-.watch-page:fullscreen .layout-control {
+.watch-page:fullscreen .layout-control,
+.watch-page:fullscreen .chat-position-control {
     gap: 0.18rem;
     padding: 0;
     border: 0;
     background: transparent;
 }
 
-.watch-page:fullscreen .layout-control button {
+.watch-page:fullscreen .layout-control button,
+.watch-page:fullscreen .chat-position-control button {
     min-width: 48px;
     min-height: 28px;
     padding: 0 0.5rem;
@@ -134,6 +179,10 @@
 }
 
 .watch-page:fullscreen .layout-control button.active {
+    background: rgba(34, 211, 238, 0.82);
+}
+
+.watch-page:fullscreen .chat-position-control button.active {
     background: rgba(34, 211, 238, 0.82);
 }
 
@@ -145,6 +194,10 @@
 .watch-page:fullscreen .stream-grid {
     width: 100%;
     height: 100%;
+}
+
+.watch-page:fullscreen .merged-chat-panel {
+    max-height: none;
 }
 
 .watch-page:fullscreen .fab-container {
@@ -168,5 +221,10 @@
 
     .watch-page:fullscreen .layout-control {
         justify-content: center;
+    }
+
+    .chat-position-control {
+        justify-content: center;
+        width: 100%;
     }
 }
