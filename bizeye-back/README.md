@@ -28,6 +28,7 @@ BIZEYE_DB_DRIVER=postgres
 DATABASE_URL=postgresql://bizeye:bizeye_dev_password@localhost:54322/bizeye
 YOUTUBE_API_MODE=mock
 KICK_CHAT_MODE=mock
+KICK_CHATROOM_OVERRIDES=
 ```
 
 Start only Postgres and migrations from the repository root:
@@ -152,7 +153,7 @@ Use `SUPABASE_SERVICE_ROLE_KEY` only in this backend. Never expose it to `bizeye
 
 ## Merged Stream Chat
 
-The generic chat merge flow receives sources with `platform` and `identifier`. YouTube uses the live `videoId` as the identifier. Kick accepts a channel slug/URL or direct numeric chatroom id; in `KICK_CHAT_MODE=live` it resolves the public channel chatroom and subscribes to Kick's public Pusher channel best-effort. Twitch is accepted by the contract, but still returns `unsupported` until a dedicated adapter is added.
+The generic chat merge flow receives sources with `platform` and `identifier`. YouTube uses the live `videoId` as the identifier. Kick accepts a channel slug/URL or direct numeric chatroom id; in `KICK_CHAT_MODE=live` it resolves the public channel chatroom and subscribes to Kick's public Pusher channel best-effort. If Kick blocks the public `slug -> chatroom_id` lookup, use `KICK_CHATROOM_OVERRIDES=slug:123,other_slug:456` or add a Kick card as `username|chatroomId`. Twitch is accepted by the contract, but still returns `unsupported` until a dedicated adapter is added.
 
 Snapshot/polling test:
 

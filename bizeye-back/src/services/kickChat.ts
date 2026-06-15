@@ -31,6 +31,18 @@ type KickChatroomResolution = {
   title?: string;
 };
 
+class KickSourceStateError extends Error {
+  readonly status: StreamChatSourceState['status'];
+  readonly title?: string;
+
+  constructor(message: string, status: StreamChatSourceState['status'], title?: string) {
+    super(message);
+    this.name = 'KickSourceStateError';
+    this.status = status;
+    this.title = title;
+  }
+}
+
 const mockKickChannels: Array<{
   aliases: string[];
   chatroomId: string;
@@ -62,6 +74,17 @@ const sanitizeError = (error: unknown) => {
   return error instanceof Error ? error.message : 'Unexpected Kick chat error';
 };
 
+const sourceStateFromError = (source: StreamChatSourceInput, error: unknown) => {
+  if (error instanceof KickSourceStateError) {
+    return sourceState(source, error.status, {
+      error: error.message,
+      title: error.title || source.title,
+    });
+  }
+
+  return sourceState(source, 'error', { error: sanitizeError(error) });
+};
+
 const isMockMode = () => getKickChatMode() === 'mock';
 
 const normalizeKickIdentifier = (value: string) => {
@@ -74,6 +97,26 @@ const getDirectChatroomId = (identifier: string) => {
   const normalized = normalizeKickIdentifier(identifier);
   const directMatch = normalized.match(/^(?:chatroom:)?(\d+)$/i);
   return directMatch?.[1] ?? null;
+};
+
+const getChatroomOverride = (identifier: string) => {
+  const normalized = normalizeKickIdentifier(identifier).toLowerCase();
+  const entries = (process.env.KICK_CHATROOM_OVERRIDES || '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  for (const entry of entries) {
+    const [rawSlug, rawChatroomId] = entry.split(':');
+    const slug = rawSlug?.trim().toLowerCase();
+    const chatroomId = rawChatroomId?.trim();
+
+    if (slug === normalized && chatroomId && /^\d+$/.test(chatroomId)) {
+      return chatroomId;
+    }
+  }
+
+  return null;
 };
 
 const findMockKickChannel = (identifier: string) => {
@@ -109,6 +152,20 @@ const parsePusherMessage = (raw: RawData) => {
     channel?: string;
     data?: unknown;
     event?: string;
+  };
+};
+
+const fetchJson = async (url: string) => {
+  const response = await fetch(url, {
+    headers: {
+      accept: 'application/json',
+      'user-agent': 'BizEye/0.1 (+https://bizeye.local)',
+    },
+  });
+
+  return {
+    data: response.ok ? ((await response.json()) as Record<string, unknown>) : null,
+    status: response.status,
   };
 };
 
@@ -185,9 +242,55 @@ const toKickMessageDraft = (
   };
 };
 
+const getPrivateChannelTitle = (data: Record<string, unknown> | null, source: StreamChatSourceInput) => {
+  const payload = data?.data && typeof data.data === 'object' ? (data.data as Record<string, unknown>) : {};
+  const account = payload.account && typeof payload.account === 'object' ? (payload.account as Record<string, unknown>) : {};
+  const user = account.user && typeof account.user === 'object' ? (account.user as Record<string, unknown>) : {};
+  const channel = account.channel && typeof account.channel === 'object' ? (account.channel as Record<string, unknown>) : {};
+
+  return getString(user.username) ?? getString(channel.slug) ?? source.title;
+};
+
+const resolveKickPrivateChannelFallback = async (
+  source: StreamChatSourceInput,
+  slug: string,
+  blockedStatus: number,
+): Promise<never> => {
+  const channelResult = await fetchJson(`https://api.kick.com/private/v1/channels/${encodeURIComponent(slug)}`);
+
+  if (channelResult.status === 404) {
+    throw new KickSourceStateError('kick_channel_not_found', 'not_found', source.title);
+  }
+
+  if (!channelResult.data) {
+    throw new KickSourceStateError(
+      `kick_channel_lookup_failed_${blockedStatus}_private_${channelResult.status}`,
+      'error',
+      source.title,
+    );
+  }
+
+  const title = getPrivateChannelTitle(channelResult.data, source);
+  const livestreamResult = await fetchJson(
+    `https://api.kick.com/private/v1/channels/${encodeURIComponent(slug)}/livestream`,
+  );
+  const livestreamData = livestreamResult.data?.data && typeof livestreamResult.data.data === 'object'
+    ? (livestreamResult.data.data as Record<string, unknown>)
+    : {};
+
+  if (livestreamResult.data && livestreamData.livestream === null) {
+    throw new KickSourceStateError('kick_channel_offline', 'offline', title);
+  }
+
+  throw new KickSourceStateError(`kick_chatroom_lookup_blocked_${blockedStatus}`, 'error', title);
+};
+
 const resolveKickChatroom = async (source: StreamChatSourceInput): Promise<KickChatroomResolution> => {
   const directChatroomId = getDirectChatroomId(source.identifier);
   if (directChatroomId) return { chatroomId: directChatroomId, title: source.title };
+
+  const chatroomOverride = getChatroomOverride(source.identifier);
+  if (chatroomOverride) return { chatroomId: chatroomOverride, title: source.title };
 
   if (isMockMode()) {
     const channel = findMockKickChannel(source.identifier);
@@ -204,7 +307,11 @@ const resolveKickChatroom = async (source: StreamChatSourceInput): Promise<KickC
   });
 
   if (!response.ok) {
-    throw new Error(`kick_channel_lookup_failed_${response.status}`);
+    if (response.status === 403) {
+      return resolveKickPrivateChannelFallback(source, slug, response.status);
+    }
+
+    throw new KickSourceStateError(`kick_channel_lookup_failed_${response.status}`, 'error', source.title);
   }
 
   const data = (await response.json()) as Record<string, unknown>;
@@ -214,7 +321,7 @@ const resolveKickChatroom = async (source: StreamChatSourceInput): Promise<KickC
   const chatroomId = getString(chatroom.id) ?? getString(data.chatroom_id);
   const user = data.user && typeof data.user === 'object' ? (data.user as Record<string, unknown>) : {};
 
-  if (!chatroomId) throw new Error('kick_chatroom_not_found');
+  if (!chatroomId) throw new KickSourceStateError('kick_chatroom_not_found', 'not_found', source.title);
 
   return {
     chatroomId,
@@ -259,7 +366,7 @@ export const fetchKickChatSnapshot = async (
   } catch (error) {
     return {
       messages: [],
-      source: sourceState(source, 'error', { error: sanitizeError(error) }),
+      source: sourceStateFromError(source, error),
     };
   }
 };
@@ -285,7 +392,7 @@ export const runKickChat = async ({ maxResults, publish, signal, source, updateS
   try {
     resolution = await resolveKickChatroom(source);
   } catch (error) {
-    updateSource(sourceState(source, 'error', { error: sanitizeError(error) }));
+    updateSource(sourceStateFromError(source, error));
     return;
   }
 

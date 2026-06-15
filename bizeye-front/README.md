@@ -38,6 +38,7 @@ The base Watch list is fixed to ACF, Tonimec, and EEBrasil. On page load/F5, the
 - If there is no usable cache, the player first tries the `live_stream?channel=` embed and records a discovered `videoId` when the IFrame API exposes one.
 - If the channel embed fails, the backend falls back to YouTube API discovery and returns the active `videoId`.
 - When chat merge is enabled, the Watch page sends `{ platform, identifier }` sources to `/stream/chat/merge/stream` or `/stream/chat/merge/ws`, according to `bizeye-chat-transport`, and renders individual chat messages from the backend queue.
+- Kick cards can be added as `username` for normal lookup, or as `username|chatroomId` when Kick blocks backend chatroom lookup but the numeric chatroom id was captured from the browser Network tab.
 
 ## Codex Worktrees
 
