@@ -13,7 +13,7 @@ describe('streamChat', () => {
         { identifier: 'acfLive0001', platform: 'youtube', title: 'ACF' },
         { identifier: 'gaules', platform: 'kick', title: 'Gaules Kick' },
         { identifier: 'tonimec0001', platform: 'youtube', title: 'Tonimec' },
-        { identifier: 'gaules', platform: 'twitch', title: 'Gaules' },
+        { identifier: 'gaules', platform: 'twitch', title: 'Gaules Twitch' },
       ],
     });
 
@@ -21,12 +21,13 @@ describe('streamChat', () => {
       'youtube:live',
       'kick:live',
       'youtube:live',
-      'twitch:unsupported',
+      'twitch:live',
     ]);
     expect(snapshot.messages.map((message) => `${message.platform}:${message.id}`)).toEqual([
       'youtube:acf-chat-001',
       'kick:kick-gaules-chat-001',
       'youtube:tonimec-chat-001',
+      'twitch:twitch-gaules-chat-001',
     ]);
   });
 

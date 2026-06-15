@@ -1,4 +1,8 @@
-const RESOLVER_BASE_URL = (import.meta.env.VITE_RESOLVER_BASE_URL || '').replace(/\/+$/, '');
+const DEFAULT_DEV_RESOLVER_BASE_URL = 'http://127.0.0.1:3000';
+const RESOLVER_BASE_URL = (
+  import.meta.env.VITE_RESOLVER_BASE_URL ||
+  (import.meta.env.DEV ? DEFAULT_DEV_RESOLVER_BASE_URL : '')
+).replace(/\/+$/, '');
 
 export type StreamChatPlatform = 'kick' | 'twitch' | 'youtube';
 export type StreamChatTransport = 'sse' | 'websocket';
@@ -79,7 +83,7 @@ const getUniqueSources = (sources: StreamChatSourceInput[]) => [
     sources
       .filter((source) => source.identifier && source.platform)
       .map((source) => [
-        `${source.platform}:${source.platform === 'kick' ? source.chatIdentifier || source.identifier : source.identifier}`,
+        `${source.platform}:${source.platform === 'kick' || source.platform === 'twitch' ? source.chatIdentifier || source.identifier : source.identifier}`,
         source,
       ]),
   ).values(),
