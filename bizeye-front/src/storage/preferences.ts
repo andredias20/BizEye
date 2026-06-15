@@ -1,8 +1,10 @@
-import type { Platform, Stream, ViewLayoutMode } from '../types';
+import type { ChatPanelPosition, Platform, Stream, ViewLayoutMode } from '../types';
 
 const STREAMS_STORAGE_KEY = 'bizeye.streams.v1';
+const WATCH_CHAT_POSITION_STORAGE_KEY = 'bizeye.watchChatPosition.v1';
 const WATCH_LAYOUT_STORAGE_KEY = 'bizeye.watchLayout.v1';
 
+const chatPanelPositions: ChatPanelPosition[] = ['left', 'right', 'bottom'];
 const platforms: Platform[] = ['youtube', 'twitch', 'kick'];
 const liveStatuses: Array<NonNullable<Stream['liveStatus']>> = ['live', 'offline', 'unknown', 'error', 'quota_limited'];
 const layoutModes: ViewLayoutMode[] = ['balanced', 'max-horizontal', 'max-vertical', 'width-guided', 'height-guided'];
@@ -53,24 +55,24 @@ const uniqueStreams = (streams: Stream[]) => {
     });
 };
 
-export const loadStoredStreams = (fallback: Stream[]) => {
-    if (!canUseLocalStorage()) return fallback;
+export const loadStoredStreams = () => {
+    if (!canUseLocalStorage()) return null;
 
     try {
         const rawStreams = window.localStorage.getItem(STREAMS_STORAGE_KEY);
-        if (rawStreams === null) return fallback;
+        if (rawStreams === null) return null;
 
         const parsed = JSON.parse(rawStreams) as unknown;
-        if (!Array.isArray(parsed)) return fallback;
+        if (!Array.isArray(parsed)) return null;
 
         return uniqueStreams(parsed.map(normalizeStream).filter((stream): stream is Stream => Boolean(stream)));
     } catch (error) {
         console.warn('Could not load BizEye streams from localStorage:', error);
-        return fallback;
+        return null;
     }
 };
 
-export const mergeFixedStreams = (streams: Stream[], fixedStreams: Stream[]) => {
+export const mergeKnownStreamMetadata = (streams: Stream[], fixedStreams: Stream[]) => {
     const fixedByKey = new Map(fixedStreams.map((stream) => [`${stream.platform}:${stream.id}`, stream]));
     const merged = streams.map((stream) => {
         const fixed = fixedByKey.get(`${stream.platform}:${stream.id}`);
@@ -81,14 +83,6 @@ export const mergeFixedStreams = (streams: Stream[], fixedStreams: Stream[]) => 
             title: fixed.title,
         };
     });
-    const currentKeys = new Set(merged.map((stream) => `${stream.platform}:${stream.id}`));
-
-    for (const fixedStream of fixedStreams) {
-        const key = `${fixedStream.platform}:${fixedStream.id}`;
-        if (!currentKeys.has(key)) {
-            merged.push(fixedStream);
-        }
-    }
 
     return uniqueStreams(merged);
 };
@@ -122,5 +116,27 @@ export const saveStoredWatchLayout = (layoutMode: ViewLayoutMode) => {
         window.localStorage.setItem(WATCH_LAYOUT_STORAGE_KEY, layoutMode);
     } catch (error) {
         console.warn('Could not save BizEye watch layout to localStorage:', error);
+    }
+};
+
+export const loadStoredWatchChatPosition = (fallback: ChatPanelPosition) => {
+    if (!canUseLocalStorage()) return fallback;
+
+    try {
+        const rawPosition = window.localStorage.getItem(WATCH_CHAT_POSITION_STORAGE_KEY);
+        return chatPanelPositions.includes(rawPosition as ChatPanelPosition) ? rawPosition as ChatPanelPosition : fallback;
+    } catch (error) {
+        console.warn('Could not load BizEye watch chat position from localStorage:', error);
+        return fallback;
+    }
+};
+
+export const saveStoredWatchChatPosition = (position: ChatPanelPosition) => {
+    if (!canUseLocalStorage()) return;
+
+    try {
+        window.localStorage.setItem(WATCH_CHAT_POSITION_STORAGE_KEY, position);
+    } catch (error) {
+        console.warn('Could not save BizEye watch chat position to localStorage:', error);
     }
 };

@@ -9,20 +9,23 @@
     "dev:debug:docker": "node --inspect=0.0.0.0:9229 --enable-source-maps --import tsx src/dev.ts",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:chat": "vitest run src/services/youtubeLiveChat.test.ts src/routes/youtubeChat.test.ts src/services/streamChat.test.ts src/routes/streamChat.test.ts"
   },
   "dependencies": {
-    "@hono/node-server": "^1.19.6",
+    "@hono/node-server": "^2.0.4",
     "@supabase/supabase-js": "^2.87.1",
     "dotenv": "^17.4.2",
     "hono": "^4.10.7",
     "nanoid": "^5.1.6",
     "pg": "^8.21.0",
+    "ws": "^8.21.0",
     "zod": "^4.1.13"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
     "@types/pg": "^8.20.0",
+    "@types/ws": "^8.18.1",
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "vitest": "^4.0.15"

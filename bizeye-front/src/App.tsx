@@ -11,19 +11,25 @@ import { isFireTvLikeDevice } from './platform/fireTv'
 import { fetchYoutubeLiveStatuses } from './services/youtubeResolver'
 import {
   flagDefinitions,
+  getBizeyeChatMergeFlagValue,
+  getBizeyeChatTransportFlagValue,
   getBizeyeResolveFlagValue,
   getFlagValues,
+  getInitialBizeyeChatMergeFlagValue,
+  getInitialBizeyeChatTransportFlagValue,
   getInitialBizeyeResolveFlagValue,
 } from './flags'
 import {
   loadStoredStreams,
+  loadStoredWatchChatPosition,
   loadStoredWatchLayout,
-  mergeFixedStreams,
+  mergeKnownStreamMetadata,
   saveStoredStreams,
+  saveStoredWatchChatPosition,
   saveStoredWatchLayout,
 } from './storage/preferences'
 
-import type { Platform, Stream, ViewLayoutMode } from './types'
+import type { ChatPanelPosition, ChatTransport, Platform, Stream, ViewLayoutMode } from './types'
 
 type AppPage = 'firetv' | 'home' | 'watch';
 
@@ -49,13 +55,22 @@ const getPageFromHash = (): AppPage => {
 
 function App() {
   const [activeStreams, setActiveStreams] = useState<Stream[]>(() => {
-    const streams = mergeFixedStreams(loadStoredStreams(starterStreams), starterStreams);
+    const storedStreams = loadStoredStreams();
+    const streams = storedStreams === null
+      ? starterStreams
+      : mergeKnownStreamMetadata(storedStreams, starterStreams);
+
     saveStoredStreams(streams);
     return streams;
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<AppPage>(getPageFromHash);
   const [bizeyeResolveFlagValue, setBizeyeResolveFlagValue] = useState(getInitialBizeyeResolveFlagValue);
+  const [bizeyeChatMergeFlagValue, setBizeyeChatMergeFlagValue] = useState(getInitialBizeyeChatMergeFlagValue);
+  const [bizeyeChatTransportFlagValue, setBizeyeChatTransportFlagValue] = useState<ChatTransport>(
+    getInitialBizeyeChatTransportFlagValue,
+  );
+  const [chatPanelPosition, setChatPanelPosition] = useState<ChatPanelPosition>(() => loadStoredWatchChatPosition('right'));
   const [layoutMode, setLayoutMode] = useState<ViewLayoutMode>(() => loadStoredWatchLayout('balanced'));
   const didAutoRedirectFireTv = useRef(false);
   const didRefreshInitialLives = useRef(false);
@@ -77,8 +92,16 @@ function App() {
   useEffect(() => {
     let isCancelled = false;
 
-    getBizeyeResolveFlagValue().then((value) => {
-      if (!isCancelled) setBizeyeResolveFlagValue(value);
+    Promise.all([
+      getBizeyeResolveFlagValue(),
+      getBizeyeChatMergeFlagValue(),
+      getBizeyeChatTransportFlagValue(),
+    ]).then(([resolveValue, chatMergeValue, chatTransportValue]) => {
+      if (!isCancelled) {
+        setBizeyeResolveFlagValue(resolveValue);
+        setBizeyeChatMergeFlagValue(chatMergeValue);
+        setBizeyeChatTransportFlagValue(chatTransportValue);
+      }
     });
 
     return () => {
@@ -182,6 +205,11 @@ function App() {
     saveStoredWatchLayout(mode);
   };
 
+  const changeChatPanelPosition = (position: ChatPanelPosition) => {
+    setChatPanelPosition(position);
+    saveStoredWatchChatPosition(position);
+  };
+
   const updateYoutubeLiveVideo = useCallback((channelId: string, videoId: string, title?: string) => {
     updateActiveStreams((streams) => {
       let hasChanges = false;
@@ -208,7 +236,11 @@ function App() {
   return (
     <div className={`app-shell app-shell--${currentPage}`}>
       <FlagDefinitions definitions={flagDefinitions} />
-      <FlagValues values={getFlagValues(bizeyeResolveFlagValue)} />
+      <FlagValues values={getFlagValues(
+        bizeyeResolveFlagValue,
+        bizeyeChatMergeFlagValue,
+        bizeyeChatTransportFlagValue,
+      )} />
 
       {currentPage !== 'firetv' && (
         <Header
@@ -229,8 +261,12 @@ function App() {
         />
       ) : currentPage === 'watch' ? (
         <WatchPage
+          chatMergeEnabled={bizeyeChatMergeFlagValue}
+          chatPanelPosition={chatPanelPosition}
+          chatTransport={bizeyeChatTransportFlagValue}
           layoutMode={layoutMode}
           onAddStream={() => setIsModalOpen(true)}
+          onChatPanelPositionChange={changeChatPanelPosition}
           onLayoutModeChange={changeLayoutMode}
           onLiveVideoResolved={updateYoutubeLiveVideo}
           onRemoveStream={removeStream}

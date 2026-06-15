@@ -2,6 +2,10 @@ export type Platform = 'youtube' | 'twitch' | 'kick';
 
 export type PlaybackProfile = 'firetv' | 'standard';
 
+export type ChatPanelPosition = 'bottom' | 'left' | 'right';
+
+export type ChatTransport = 'sse' | 'websocket';
+
 export type ViewLayoutMode =
     | 'balanced'
     | 'max-horizontal'

@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react';
 import './WatchPage.css';
 import AddStreamButton from '../components/AddStreamButton';
+import MergedYouTubeChatPanel from '../components/MergedYouTubeChatPanel';
 import StreamDashboard from '../components/StreamDashboard';
 
-import type { Stream, ViewLayoutMode } from '../types';
+import type { ChatPanelPosition, ChatTransport, Stream, ViewLayoutMode } from '../types';
 
 interface WatchPageProps {
+    chatMergeEnabled: boolean;
+    chatPanelPosition: ChatPanelPosition;
+    chatTransport: ChatTransport;
     layoutMode: ViewLayoutMode;
     onAddStream: () => void;
+    onChatPanelPositionChange: (position: ChatPanelPosition) => void;
     onLayoutModeChange: (mode: ViewLayoutMode) => void;
     onLiveVideoResolved: (channelId: string, videoId: string, title?: string) => void;
     onRemoveStream: (id: string, platform: Stream['platform']) => void;
@@ -22,9 +27,19 @@ const layoutOptions: Array<{ id: ViewLayoutMode; label: string; title: string }>
     { id: 'height-guided', label: 'Altura', title: 'Largura dos videos guiada pela altura disponivel' },
 ];
 
+const chatPositionOptions: Array<{ id: ChatPanelPosition; label: string; title: string }> = [
+    { id: 'left', label: 'Esq', title: 'Chat no lado esquerdo' },
+    { id: 'right', label: 'Dir', title: 'Chat no lado direito' },
+    { id: 'bottom', label: 'Baixo', title: 'Chat abaixo dos videos' },
+];
+
 const WatchPage: React.FC<WatchPageProps> = ({
+    chatMergeEnabled,
+    chatPanelPosition,
+    chatTransport,
     layoutMode,
     onAddStream,
+    onChatPanelPositionChange,
     onLayoutModeChange,
     onLiveVideoResolved,
     onRemoveStream,
@@ -69,6 +84,22 @@ const WatchPage: React.FC<WatchPageProps> = ({
                     ))}
                 </div>
 
+                {chatMergeEnabled && (
+                    <div className="chat-position-control" aria-label="Posicao do chat">
+                        {chatPositionOptions.map((option) => (
+                            <button
+                                className={chatPanelPosition === option.id ? 'active' : ''}
+                                key={option.id}
+                                onClick={() => onChatPanelPositionChange(option.id)}
+                                title={option.title}
+                                type="button"
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 {isFullscreen && (
                     <button
                         aria-label="Sair do fullscreen"
@@ -97,12 +128,16 @@ const WatchPage: React.FC<WatchPageProps> = ({
                 )}
             </div>
 
-            <StreamDashboard
-                layoutMode={layoutMode}
-                onLiveVideoResolved={onLiveVideoResolved}
-                onRemoveStream={onRemoveStream}
-                streams={streams}
-            />
+            <div className={`watch-body watch-body--chat-${chatPanelPosition}`}>
+                <StreamDashboard
+                    layoutMode={layoutMode}
+                    onLiveVideoResolved={onLiveVideoResolved}
+                    onRemoveStream={onRemoveStream}
+                    streams={streams}
+                />
+
+                <MergedYouTubeChatPanel enabled={chatMergeEnabled} streams={streams} transport={chatTransport} />
+            </div>
 
             <AddStreamButton onClick={onAddStream} />
         </main>
