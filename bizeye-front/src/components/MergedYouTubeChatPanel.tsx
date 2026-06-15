@@ -39,7 +39,12 @@ const getChatSource = (stream: Stream): StreamChatSourceInput | null => {
     }
 
     if (stream.platform === 'twitch') {
-        return { identifier: stream.id, platform: 'twitch', title: stream.title };
+        return {
+            chatIdentifier: stream.chatIdentifier,
+            identifier: stream.id,
+            platform: 'twitch',
+            title: stream.title || stream.id,
+        };
     }
 
     return null;

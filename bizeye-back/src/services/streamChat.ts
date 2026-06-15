@@ -5,6 +5,7 @@ import {
   type YouTubeChatSourceInput,
 } from './youtubeLiveChat.js';
 import { fetchKickChatSnapshot, runKickChat } from './kickChat.js';
+import { fetchTwitchChatSnapshot, runTwitchChat } from './twitchChat.js';
 
 const DEFAULT_MAX_RESULTS_PER_SOURCE = 200;
 const DEFAULT_POLL_MS = 5_000;
@@ -134,7 +135,7 @@ const uniqueSources = (sources: StreamChatSourceInput[]) => {
 
     const chatIdentifier = source.chatIdentifier?.trim() || undefined;
     const platform = source.platform;
-    const keyIdentifier = platform === 'kick' ? chatIdentifier || identifier : identifier;
+    const keyIdentifier = platform === 'kick' || platform === 'twitch' ? chatIdentifier || identifier : identifier;
     const key = `${platform}:${keyIdentifier}`;
     if (byKey.has(key)) continue;
 
@@ -296,6 +297,11 @@ const runSource = (context: AdapterContext) => {
     return;
   }
 
+  if (context.source.platform === 'twitch') {
+    void runTwitchChat(context);
+    return;
+  }
+
   runUnsupportedChat(context);
 };
 
@@ -311,6 +317,17 @@ export const fetchStreamChatSnapshot = async ({
   for (const source of safeSources) {
     if (source.platform === 'kick') {
       const result = await fetchKickChatSnapshot(source, maxResultsPerSource);
+      sourceStates.push(result.source);
+
+      for (const message of result.messages) {
+        queue.enqueue(message);
+      }
+
+      continue;
+    }
+
+    if (source.platform === 'twitch') {
+      const result = await fetchTwitchChatSnapshot(source, maxResultsPerSource);
       sourceStates.push(result.source);
 
       for (const message of result.messages) {

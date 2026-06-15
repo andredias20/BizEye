@@ -71,7 +71,7 @@ const getBuildTimeDefault = () => {
 };
 
 const getBuildTimeChatMergeDefault = () => {
-  return parseFlagValue(import.meta.env.VITE_FEATURE_BIZEYE_CHAT_MERGE) ?? false;
+  return parseFlagValue(import.meta.env.VITE_FEATURE_BIZEYE_CHAT_MERGE) ?? import.meta.env.DEV;
 };
 
 const getBuildTimeChatTransportDefault = (): ChatTransport => {

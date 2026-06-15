@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const databaseDriverSchema = z.enum(['supabase', 'postgres']).default('supabase');
 const kickChatModeSchema = z.enum(['live', 'mock']).optional();
+const twitchChatModeSchema = z.enum(['live', 'mock']).optional();
 const youtubeApiModeSchema = z.enum(['live', 'mock']).default('live');
 
 const supabaseEnvSchema = z.object({
@@ -23,6 +24,7 @@ const optionalServerEnvSchema = z.object({
   SESSION_COOKIE_NAME: z.string().default('bizeye_admin_session'),
   CRON_SECRET: z.string().optional(),
   KICK_CHAT_MODE: kickChatModeSchema,
+  TWITCH_CHAT_MODE: twitchChatModeSchema,
   YOUTUBE_API_MODE: youtubeApiModeSchema,
 });
 
@@ -30,6 +32,7 @@ export type DatabaseDriver = z.infer<typeof databaseDriverSchema>;
 export type KickChatMode = NonNullable<z.infer<typeof kickChatModeSchema>>;
 export type PostgresEnv = z.infer<typeof postgresEnvSchema>;
 export type SupabaseEnv = z.infer<typeof supabaseEnvSchema>;
+export type TwitchChatMode = NonNullable<z.infer<typeof twitchChatModeSchema>>;
 export type YouTubeApiMode = z.infer<typeof youtubeApiModeSchema>;
 export type YouTubeEnv = z.infer<typeof youtubeEnvSchema>;
 
@@ -38,6 +41,8 @@ export const getOptionalServerEnv = () => optionalServerEnvSchema.parse(process.
 export const getDatabaseDriver = (): DatabaseDriver => getOptionalServerEnv().BIZEYE_DB_DRIVER;
 
 export const getKickChatMode = (): KickChatMode => getOptionalServerEnv().KICK_CHAT_MODE ?? getYouTubeApiMode();
+
+export const getTwitchChatMode = (): TwitchChatMode => getOptionalServerEnv().TWITCH_CHAT_MODE ?? getYouTubeApiMode();
 
 export const getYouTubeApiMode = (): YouTubeApiMode => getOptionalServerEnv().YOUTUBE_API_MODE;
 

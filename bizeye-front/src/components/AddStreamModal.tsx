@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { resolveKickInput } from '../services/kickResolver';
+import { resolveTwitchInput } from '../services/twitchResolver';
 import { resolveYoutubeInput } from '../services/youtubeResolver';
 import type { Platform } from '../types';
 import './AddStreamModal.css';
@@ -37,26 +38,16 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
                 const resolved = await resolveYoutubeInput(id);
                 id = resolved.id;
                 title = resolved.title;
+            } else if (platform === 'kick') {
+                const resolved = await resolveKickInput(inputValue);
+                id = resolved.id;
+                title = resolved.title;
+                chatIdentifier = resolved.chatIdentifier;
             } else {
-                // Twitch/Kick handle extraction
-                if (id.includes('.com/') || id.includes('.tv/')) {
-                    try {
-                        const url = new URL(id.includes('http') ? id : `https://${id}`);
-                        const pathParts = url.pathname.split('/').filter(p => p);
-                        id = pathParts[0] || id;
-                    } catch {
-                        id = id.split('/').pop() || id;
-                    }
-                }
-
-                if (platform === 'kick') {
-                    const resolved = await resolveKickInput(inputValue);
-                    id = resolved.id;
-                    title = resolved.title;
-                    chatIdentifier = resolved.chatIdentifier;
-                } else {
-                    title = id;
-                }
+                const resolved = resolveTwitchInput(inputValue);
+                id = resolved.id;
+                title = resolved.title;
+                chatIdentifier = resolved.chatIdentifier;
             }
 
             console.log(`Adding ${platform} stream: ${id} (${title})`);
@@ -104,7 +95,7 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
                     <div className="input-group">
                         <label>
                             {platform === 'youtube' ? 'Channel URL, ID ou Handle (@...)' :
-                                platform === 'twitch' ? 'Twitch username ou link' :
+                                platform === 'twitch' ? 'Twitch username, link ou username|chat' :
                                     'Kick username, link ou username|chatroomId'}
                         </label>
                         <input
