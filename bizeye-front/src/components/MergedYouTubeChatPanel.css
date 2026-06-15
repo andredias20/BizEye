@@ -1,15 +1,21 @@
 .merged-chat-panel {
+    --merged-chat-list-max-height: 30rem;
+    --merged-chat-message-gap: 0.55rem;
     width: min(360px, 32vw);
     min-width: 300px;
     min-height: 0;
+    max-height: 100%;
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     border-left: 1px solid var(--border-soft);
     background: #090b12;
     color: var(--text);
+    overflow: hidden;
 }
 
 .merged-chat-header {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -52,24 +58,43 @@
     color: var(--accent-green);
 }
 
+.merged-chat-state--connecting {
+    border-color: rgba(255, 204, 102, 0.42);
+    color: #ffd166;
+}
+
 .merged-chat-state--error {
     border-color: rgba(255, 110, 118, 0.42);
     color: #ff8a92;
 }
 
 .merged-chat-sources {
+    flex: 0 0 auto;
     display: flex;
+    align-items: stretch;
     gap: 0.4rem;
+    min-height: 4.75rem;
+    max-height: 5rem;
     padding: 0.6rem 0.75rem;
     border-bottom: 1px solid var(--border-soft);
     overflow-x: auto;
+    overflow-y: hidden;
 }
 
 .merged-chat-source {
-    flex: 0 0 auto;
-    max-width: 170px;
+    flex: 0 0 clamp(9.4rem, 42%, 12rem);
+    min-width: 9.4rem;
+    max-width: 12rem;
+    min-height: 3.45rem;
     display: grid;
-    gap: 0.1rem;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-areas:
+        "dot platform title"
+        ". status status";
+    align-content: center;
+    align-items: center;
+    column-gap: 0.38rem;
+    row-gap: 0.16rem;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     padding: 0.42rem 0.5rem;
@@ -77,11 +102,30 @@
     font-size: 0.74rem;
     font-weight: 800;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+}
+
+.merged-chat-source-dot {
+    grid-area: dot;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.04);
+}
+
+.merged-chat-source-dot--connected {
+    background: var(--accent-green);
+}
+
+.merged-chat-source-dot--connecting {
+    background: #ffd166;
+}
+
+.merged-chat-source-dot--error {
+    background: #ff6e76;
 }
 
 .merged-chat-platform {
+    grid-area: platform;
     width: fit-content;
     border-radius: 4px;
     color: #02040a;
@@ -105,31 +149,54 @@
     background: #53fc18;
 }
 
+.merged-chat-source-title {
+    grid-area: title;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .merged-chat-source small {
+    grid-area: status;
     color: var(--text-muted);
     font-family: var(--mono-font);
     font-size: 0.63rem;
     font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
-.merged-chat-source--live {
-    border-color: rgba(0, 255, 136, 0.22);
+.merged-chat-source--connected {
+    border-color: rgba(0, 255, 136, 0.28);
+}
+
+.merged-chat-source--connecting {
+    border-color: rgba(255, 204, 102, 0.32);
+}
+
+.merged-chat-source--error {
+    border-color: rgba(255, 110, 118, 0.34);
 }
 
 .merged-chat-list-shell {
     flex: 1 1 auto;
     min-height: 0;
+    max-height: var(--merged-chat-list-max-height);
+    overflow: hidden;
     position: relative;
     display: flex;
 }
 
 .merged-chat-list {
     width: 100%;
+    height: 100%;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
+    gap: var(--merged-chat-message-gap);
     padding: 0.75rem;
     overflow-y: auto;
 }
@@ -168,6 +235,7 @@
 }
 
 .merged-chat-message {
+    min-height: 4.75rem;
     display: grid;
     gap: 0.28rem;
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -222,7 +290,8 @@
 @media (max-width: 920px) {
     .watch-body--chat-bottom .merged-chat-panel {
         width: 100%;
-        max-height: 34vh;
+        height: clamp(14rem, 34vh, 30rem);
+        max-height: clamp(14rem, 34vh, 30rem);
         min-width: 0;
         border-top: 1px solid var(--border-soft);
         border-left: 0;
@@ -231,10 +300,11 @@
     .watch-body--chat-left .merged-chat-panel,
     .watch-body--chat-right .merged-chat-panel {
         width: min(300px, 42vw);
-        min-width: 170px;
+        min-width: 190px;
     }
 
-    .merged-chat-sources {
-        display: none;
+    .merged-chat-source {
+        flex-basis: 8.75rem;
+        min-width: 8.75rem;
     }
 }

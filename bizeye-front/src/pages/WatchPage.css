@@ -97,8 +97,10 @@
 
 .watch-body--chat-bottom .merged-chat-panel {
     width: 100%;
-    max-height: 34vh;
+    height: clamp(14rem, 34vh, 30rem);
+    max-height: clamp(14rem, 34vh, 30rem);
     min-width: 0;
+    flex: 0 0 clamp(14rem, 34vh, 30rem);
     border-top: 1px solid var(--border-soft);
     border-left: 0;
 }

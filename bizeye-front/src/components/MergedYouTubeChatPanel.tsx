@@ -3,7 +3,12 @@ import './MergedYouTubeChatPanel.css';
 import { canOpenMergedStreamChatTransport, openMergedStreamChat } from '../services/streamChat';
 
 import type { ChatTransport, Stream } from '../types';
-import type { StreamChatMessage, StreamChatSourceInput, StreamChatSourceState } from '../services/streamChat';
+import type {
+    StreamChatMessage,
+    StreamChatSourceInput,
+    StreamChatSourceState,
+    StreamChatSourceStatus,
+} from '../services/streamChat';
 
 interface MergedYouTubeChatPanelProps {
     enabled: boolean;
@@ -12,6 +17,15 @@ interface MergedYouTubeChatPanelProps {
 }
 
 type ConnectionState = 'idle' | 'connecting' | 'live' | 'error';
+type SourceConnectionTone = 'connected' | 'connecting' | 'error';
+
+type ChatSourceView = {
+    error?: string;
+    identifier: string;
+    platform: StreamChatSourceInput['platform'];
+    status?: StreamChatSourceStatus;
+    title?: string;
+};
 
 const YOUTUBE_VIDEO_ID_PATTERN = /^[a-zA-Z0-9_-]{11}$/;
 const MAX_MESSAGES = 80;
@@ -74,14 +88,30 @@ const mergeMessages = (previous: StreamChatMessage[], incoming: StreamChatMessag
     return next.slice(-MAX_MESSAGES);
 };
 
-const getStatusLabel = (state: StreamChatSourceState) => {
-    if (state.status === 'live') return 'live';
-    if (state.status === 'chat_unavailable') return 'sem chat';
-    if (state.status === 'not_found') return 'nao encontrada';
-    if (state.status === 'offline') return 'offline';
-    if (state.status === 'unsupported') return 'sem conector';
+const getSourceStateKey = (source: Pick<StreamChatSourceInput, 'identifier' | 'platform'>) => (
+    `${source.platform}:${source.identifier}`
+);
+
+const getSourceStatusLabel = (status: StreamChatSourceStatus | undefined, connectionState: ConnectionState) => {
+    if (!status) return connectionState === 'error' ? 'erro' : 'conectando';
+
+    if (status === 'live') return 'conectado';
+    if (status === 'chat_unavailable') return 'sem chat';
+    if (status === 'not_found') return 'nao encontrada';
+    if (status === 'offline') return 'offline';
+    if (status === 'unsupported') return 'sem conector';
 
     return 'erro';
+};
+
+const getSourceTone = (
+    status: StreamChatSourceStatus | undefined,
+    connectionState: ConnectionState,
+): SourceConnectionTone => {
+    if (status === 'live') return 'connected';
+    if (!status && connectionState !== 'error') return 'connecting';
+
+    return 'error';
 };
 
 const getPlatformLabel = (platform: StreamChatMessage['platform'] | StreamChatSourceState['platform']) => {
@@ -116,6 +146,21 @@ const MergedYouTubeChatPanel: React.FC<MergedYouTubeChatPanelProps> = ({ enabled
         streams.map(getChatSource).filter((value): value is StreamChatSourceInput => Boolean(value))
     ), [streams]);
     const canStream = enabled && chatSources.length > 0;
+    const displayedSources = useMemo<ChatSourceView[]>(() => {
+        const sourceStateByKey = new Map(sources.map((source) => [getSourceStateKey(source), source]));
+
+        return chatSources.map((source) => {
+            const state = sourceStateByKey.get(getSourceStateKey(source));
+
+            return {
+                error: state?.error,
+                identifier: source.identifier,
+                platform: source.platform,
+                status: state?.status,
+                title: state?.title || source.title || source.identifier,
+            };
+        });
+    }, [chatSources, sources]);
     const sourcesKey = chatSources
         .map((source) => `${source.platform}:${source.identifier}:${source.chatIdentifier || ''}`)
         .join(',');
@@ -250,20 +295,32 @@ const MergedYouTubeChatPanel: React.FC<MergedYouTubeChatPanelProps> = ({ enabled
                 </span>
             </div>
 
-            {sources.length > 0 && (
+            {displayedSources.length > 0 && (
                 <div className="merged-chat-sources" aria-label="Fontes do chat">
-                    {sources.map((source) => (
-                        <span
-                            className={`merged-chat-source merged-chat-source--${source.status}`}
-                            key={`${source.platform}-${source.identifier}`}
-                        >
-                            <em className={`merged-chat-platform merged-chat-platform--${source.platform}`}>
-                                {getPlatformLabel(source.platform)}
-                            </em>
-                            {source.title || source.identifier}
-                            <small>{getStatusLabel(source)}</small>
-                        </span>
-                    ))}
+                    {displayedSources.map((source) => {
+                        const sourceTone = getSourceTone(source.status, connectionState);
+                        const sourceStatus = getSourceStatusLabel(source.status, connectionState);
+                        const sourceTitle = source.title || source.identifier;
+
+                        return (
+                            <span
+                                aria-label={`${getPlatformLabel(source.platform)} ${sourceTitle}: ${sourceStatus}`}
+                                className={`merged-chat-source merged-chat-source--${sourceTone}`}
+                                key={`${source.platform}-${source.identifier}`}
+                                title={`${sourceTitle} - ${sourceStatus}`}
+                            >
+                                <span
+                                    aria-hidden="true"
+                                    className={`merged-chat-source-dot merged-chat-source-dot--${sourceTone}`}
+                                />
+                                <em className={`merged-chat-platform merged-chat-platform--${source.platform}`}>
+                                    {getPlatformLabel(source.platform)}
+                                </em>
+                                <span className="merged-chat-source-title">{sourceTitle}</span>
+                                <small>{sourceStatus}</small>
+                            </span>
+                        );
+                    })}
                 </div>
             )}
 
