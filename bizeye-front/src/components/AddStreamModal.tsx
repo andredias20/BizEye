@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { resolveKickInput } from '../services/kickResolver';
 import { resolveYoutubeInput } from '../services/youtubeResolver';
 import type { Platform } from '../types';
 import './AddStreamModal.css';
@@ -49,14 +50,13 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
                 }
 
                 if (platform === 'kick') {
-                    const explicitChatroom = id.match(/^(.+?)(?:\||\s+chatroom:)(\d+)$/i);
-                    if (explicitChatroom) {
-                        id = explicitChatroom[1]?.trim() || id;
-                        chatIdentifier = `chatroom:${explicitChatroom[2]}`;
-                    }
+                    const resolved = await resolveKickInput(inputValue);
+                    id = resolved.id;
+                    title = resolved.title;
+                    chatIdentifier = resolved.chatIdentifier;
+                } else {
+                    title = id;
                 }
-
-                title = id;
             }
 
             console.log(`Adding ${platform} stream: ${id} (${title})`);

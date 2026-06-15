@@ -4,6 +4,7 @@ export type StreamChatPlatform = 'kick' | 'twitch' | 'youtube';
 export type StreamChatTransport = 'sse' | 'websocket';
 
 export type StreamChatSourceInput = {
+  chatIdentifier?: string;
   identifier: string;
   platform: StreamChatPlatform;
   title?: string;
@@ -77,7 +78,10 @@ const getUniqueSources = (sources: StreamChatSourceInput[]) => [
   ...new Map(
     sources
       .filter((source) => source.identifier && source.platform)
-      .map((source) => [`${source.platform}:${source.identifier}`, source]),
+      .map((source) => [
+        `${source.platform}:${source.platform === 'kick' ? source.chatIdentifier || source.identifier : source.identifier}`,
+        source,
+      ]),
   ).values(),
 ];
 

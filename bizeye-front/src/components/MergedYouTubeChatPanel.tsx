@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './MergedYouTubeChatPanel.css';
 import { canOpenMergedStreamChatTransport, openMergedStreamChat } from '../services/streamChat';
 
@@ -30,7 +30,12 @@ const getChatSource = (stream: Stream): StreamChatSourceInput | null => {
     }
 
     if (stream.platform === 'kick') {
-        return { identifier: stream.chatIdentifier || stream.id, platform: 'kick', title: stream.title || stream.id };
+        return {
+            chatIdentifier: stream.chatIdentifier,
+            identifier: stream.id,
+            platform: 'kick',
+            title: stream.title || stream.id,
+        };
     }
 
     if (stream.platform === 'twitch') {
@@ -80,23 +85,74 @@ const getPlatformLabel = (platform: StreamChatMessage['platform'] | StreamChatSo
     return 'KICK';
 };
 
+const isNearBottom = (element: HTMLElement) => {
+    return element.scrollHeight - element.scrollTop - element.clientHeight <= 32;
+};
+
+const getResumeScrollLabel = (pendingMessages: number) => {
+    if (pendingMessages <= 0) return 'Voltar ao vivo';
+
+    return pendingMessages === 1
+        ? '1 nova - voltar ao vivo'
+        : `${pendingMessages} novas - voltar ao vivo`;
+};
+
 const MergedYouTubeChatPanel: React.FC<MergedYouTubeChatPanelProps> = ({ enabled, streams, transport }) => {
     const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
+    const [isScrollPaused, setIsScrollPaused] = useState(false);
     const [messages, setMessages] = useState<StreamChatMessage[]>([]);
+    const [pendingMessageCount, setPendingMessageCount] = useState(0);
     const [sources, setSources] = useState<StreamChatSourceState[]>([]);
+    const latestMessageKeyRef = useRef<string | null>(null);
+    const listRef = useRef<HTMLDivElement | null>(null);
+    const previousMessageCountRef = useRef(0);
 
     const chatSources = useMemo(() => (
         streams.map(getChatSource).filter((value): value is StreamChatSourceInput => Boolean(value))
     ), [streams]);
     const canStream = enabled && chatSources.length > 0;
-    const sourcesKey = chatSources.map((source) => `${source.platform}:${source.identifier}`).join(',');
+    const sourcesKey = chatSources
+        .map((source) => `${source.platform}:${source.identifier}:${source.chatIdentifier || ''}`)
+        .join(',');
+
+    const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+        const list = listRef.current;
+        if (!list) return;
+
+        list.scrollTo({
+            behavior,
+            top: list.scrollHeight,
+        });
+    }, []);
+
+    const handleChatScroll = useCallback(() => {
+        const list = listRef.current;
+        if (!list) return;
+
+        const shouldPause = !isNearBottom(list);
+        setIsScrollPaused(shouldPause);
+
+        if (!shouldPause) {
+            setPendingMessageCount(0);
+        }
+    }, []);
+
+    const resumeAutoScroll = useCallback(() => {
+        setIsScrollPaused(false);
+        setPendingMessageCount(0);
+        window.requestAnimationFrame(() => scrollToBottom('smooth'));
+    }, [scrollToBottom]);
 
     useEffect(() => {
         if (!canStream) return;
 
         const resetTimer = window.setTimeout(() => {
             setConnectionState('connecting');
+            setIsScrollPaused(false);
             setMessages([]);
+            setPendingMessageCount(0);
+            latestMessageKeyRef.current = null;
+            previousMessageCountRef.current = 0;
             setSources([]);
         }, 0);
 
@@ -144,6 +200,37 @@ const MergedYouTubeChatPanel: React.FC<MergedYouTubeChatPanelProps> = ({ enabled
         };
     }, [canStream, chatSources, sourcesKey, transport]);
 
+    useEffect(() => {
+        const previousMessageCount = previousMessageCountRef.current;
+        const nextMessageCount = messages.length;
+        const latestMessage = messages.at(-1);
+        const latestMessageKey = latestMessage ? getMessageKey(latestMessage) : null;
+
+        if (nextMessageCount < previousMessageCount) {
+            previousMessageCountRef.current = nextMessageCount;
+            latestMessageKeyRef.current = latestMessageKey;
+            window.requestAnimationFrame(() => scrollToBottom('auto'));
+            return;
+        }
+
+        if (!latestMessageKey || latestMessageKey === latestMessageKeyRef.current) {
+            previousMessageCountRef.current = nextMessageCount;
+            return;
+        }
+
+        const addedMessages = Math.max(nextMessageCount - previousMessageCount, 1);
+        latestMessageKeyRef.current = latestMessageKey;
+        previousMessageCountRef.current = nextMessageCount;
+
+        if (isScrollPaused) {
+            setPendingMessageCount((current) => current + addedMessages);
+            return;
+        }
+
+        const frame = window.requestAnimationFrame(() => scrollToBottom('smooth'));
+        return () => window.cancelAnimationFrame(frame);
+    }, [isScrollPaused, messages, scrollToBottom]);
+
     if (!canStream) return null;
 
     return (
@@ -175,25 +262,33 @@ const MergedYouTubeChatPanel: React.FC<MergedYouTubeChatPanelProps> = ({ enabled
                 </div>
             )}
 
-            <div className="merged-chat-list" aria-live="polite">
-                {messages.length === 0 ? (
-                    <p className="merged-chat-empty">Aguardando mensagens.</p>
-                ) : (
-                    messages.map((message) => (
-                        <article className="merged-chat-message" key={getMessageKey(message)}>
-                            <div className="merged-chat-message-top">
-                                <strong>
-                                    <em className={`merged-chat-platform merged-chat-platform--${message.platform}`}>
-                                        {getPlatformLabel(message.platform)}
-                                    </em>
-                                    {message.authorName}
-                                </strong>
-                                <time dateTime={message.publishedAt}>{formatTime(message.publishedAt)}</time>
-                            </div>
-                            <p>{message.message}</p>
-                            <span>{message.sourceTitle || message.identifier}</span>
-                        </article>
-                    ))
+            <div className="merged-chat-list-shell">
+                <div className="merged-chat-list" ref={listRef} onScroll={handleChatScroll} aria-live="polite">
+                    {messages.length === 0 ? (
+                        <p className="merged-chat-empty">Aguardando mensagens.</p>
+                    ) : (
+                        messages.map((message) => (
+                            <article className="merged-chat-message" key={getMessageKey(message)}>
+                                <div className="merged-chat-message-top">
+                                    <strong>
+                                        <em className={`merged-chat-platform merged-chat-platform--${message.platform}`}>
+                                            {getPlatformLabel(message.platform)}
+                                        </em>
+                                        {message.authorName}
+                                    </strong>
+                                    <time dateTime={message.publishedAt}>{formatTime(message.publishedAt)}</time>
+                                </div>
+                                <p>{message.message}</p>
+                                <span>{message.sourceTitle || message.identifier}</span>
+                            </article>
+                        ))
+                    )}
+                </div>
+
+                {isScrollPaused && (
+                    <button className="merged-chat-resume-scroll" type="button" onClick={resumeAutoScroll}>
+                        {getResumeScrollLabel(pendingMessageCount)}
+                    </button>
                 )}
             </div>
         </aside>

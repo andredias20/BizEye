@@ -13,6 +13,7 @@ const MAX_QUEUE_MESSAGES = 500;
 export type StreamChatPlatform = 'kick' | 'twitch' | 'youtube';
 
 export type StreamChatSourceInput = {
+  chatIdentifier?: string;
   identifier: string;
   platform: StreamChatPlatform;
   title?: string;
@@ -131,11 +132,14 @@ const uniqueSources = (sources: StreamChatSourceInput[]) => {
     const identifier = normalizeIdentifier(source.identifier);
     if (!identifier) continue;
 
+    const chatIdentifier = source.chatIdentifier?.trim() || undefined;
     const platform = source.platform;
-    const key = `${platform}:${identifier}`;
+    const keyIdentifier = platform === 'kick' ? chatIdentifier || identifier : identifier;
+    const key = `${platform}:${keyIdentifier}`;
     if (byKey.has(key)) continue;
 
     byKey.set(key, {
+      chatIdentifier,
       identifier,
       platform,
       title: source.title?.trim() || undefined,

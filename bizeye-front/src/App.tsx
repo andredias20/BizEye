@@ -8,6 +8,7 @@ import HomePage from './pages/HomePage'
 import WatchPage from './pages/WatchPage'
 import { starterStreams } from './data/creators'
 import { isFireTvLikeDevice } from './platform/fireTv'
+import { resolveKickInput } from './services/kickResolver'
 import { fetchYoutubeLiveStatuses } from './services/youtubeResolver'
 import {
   flagDefinitions,
@@ -74,6 +75,7 @@ function App() {
   const [layoutMode, setLayoutMode] = useState<ViewLayoutMode>(() => loadStoredWatchLayout('balanced'));
   const didAutoRedirectFireTv = useRef(false);
   const didRefreshInitialLives = useRef(false);
+  const attemptedKickChatroomResolutions = useRef(new Set<string>());
 
   useEffect(() => {
     const handleHashChange = () => setCurrentPage(getPageFromHash());
@@ -176,6 +178,44 @@ function App() {
       isCancelled = true;
     };
   }, [activeStreams, applyYoutubeLiveStatuses]);
+
+  useEffect(() => {
+    const unresolvedKickStreams = activeStreams.filter((stream) => (
+      stream.platform === 'kick' && !stream.chatIdentifier && stream.id.trim()
+    ));
+
+    for (const stream of unresolvedKickStreams) {
+      const key = `${stream.platform}:${stream.id}`;
+      if (attemptedKickChatroomResolutions.current.has(key)) continue;
+
+      attemptedKickChatroomResolutions.current.add(key);
+      void resolveKickInput(stream.id)
+        .then((resolved) => {
+          if (!resolved.chatIdentifier) return;
+
+          updateActiveStreams((streams) => {
+            let hasChanges = false;
+            const nextStreams = streams.map((currentStream) => {
+              if (currentStream.platform !== 'kick' || currentStream.id !== stream.id || currentStream.chatIdentifier) {
+                return currentStream;
+              }
+
+              hasChanges = true;
+              return {
+                ...currentStream,
+                chatIdentifier: resolved.chatIdentifier,
+                title: resolved.title || currentStream.title,
+              };
+            });
+
+            return hasChanges ? nextStreams : streams;
+          });
+        })
+        .catch((error) => {
+          console.warn('bizeye-kick-resolve: saved stream lookup failed.', error);
+        });
+    }
+  }, [activeStreams, updateActiveStreams]);
 
   const navigateTo = (page: AppPage) => {
     window.location.hash = page === 'watch' ? '/watch' : page === 'firetv' ? '/firetv' : '/';
