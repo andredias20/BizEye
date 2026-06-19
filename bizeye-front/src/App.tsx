@@ -3,6 +3,8 @@ import { FlagDefinitions, FlagValues } from 'flags/react'
 import './App.css'
 import Header from './components/Header'
 import AddStreamModal from './components/AddStreamModal'
+import AdminLivesPage from './pages/AdminLivesPage'
+import AdminLoginPage from './pages/AdminLoginPage'
 import FireTvPage from './pages/FireTvPage'
 import HomePage from './pages/HomePage'
 import WatchPage from './pages/WatchPage'
@@ -33,7 +35,8 @@ import {
 
 import type { ChatPanelPosition, ChatTransport, CreatorProfile, Platform, Stream, ViewLayoutMode } from './types'
 
-type AppPage = 'firetv' | 'home' | 'watch';
+type PublicAppPage = 'firetv' | 'home' | 'watch';
+type AppPage = PublicAppPage | 'adminLives' | 'adminLogin';
 
 type InitialStreamsState = {
   hadStoredStreams: boolean;
@@ -42,6 +45,14 @@ type InitialStreamsState = {
 
 const getPageFromHash = (): AppPage => {
   const hashRoute = window.location.hash.replace(/^#\/?/, '').replace(/\/$/, '');
+
+  if (hashRoute === 'admin/login') {
+    return 'adminLogin';
+  }
+
+  if (hashRoute === 'admin/lives') {
+    return 'adminLives';
+  }
 
   if (hashRoute === 'firetv' || hashRoute === 'watch') {
     return hashRoute;
@@ -52,6 +63,14 @@ const getPageFromHash = (): AppPage => {
   }
 
   const pathRoute = window.location.pathname.replace(/^\/+/, '').replace(/\/$/, '');
+
+  if (pathRoute === 'admin/login') {
+    return 'adminLogin';
+  }
+
+  if (pathRoute === 'admin/lives') {
+    return 'adminLives';
+  }
 
   if (pathRoute === 'firetv' || pathRoute === 'watch') {
     return pathRoute;
@@ -262,7 +281,7 @@ function App() {
     }
   }, [activeStreams, updateActiveStreams]);
 
-  const navigateTo = (page: AppPage) => {
+  const navigateTo = (page: PublicAppPage) => {
     window.location.hash = page === 'watch' ? '/watch' : page === 'firetv' ? '/firetv' : '/';
     setCurrentPage(page);
   };
@@ -327,7 +346,7 @@ function App() {
         bizeyeChatTransportFlagValue,
       )} />
 
-      {currentPage !== 'firetv' && (
+      {currentPage !== 'firetv' && currentPage !== 'adminLogin' && currentPage !== 'adminLives' && (
         <Header
           currentPage={currentPage}
           streamCount={activeStreams.length}
@@ -336,7 +355,11 @@ function App() {
         />
       )}
 
-      {currentPage === 'firetv' ? (
+      {currentPage === 'adminLogin' ? (
+        <AdminLoginPage />
+      ) : currentPage === 'adminLives' ? (
+        <AdminLivesPage />
+      ) : currentPage === 'firetv' ? (
         <FireTvPage
           onLiveVideoResolved={updateYoutubeLiveVideo}
           onOpenHome={() => navigateTo('home')}
@@ -366,7 +389,7 @@ function App() {
         />
       )}
 
-      {currentPage !== 'firetv' && (
+      {currentPage !== 'firetv' && currentPage !== 'adminLogin' && currentPage !== 'adminLives' && (
         <AddStreamModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}

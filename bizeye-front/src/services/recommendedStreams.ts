@@ -42,7 +42,7 @@ export const fetchRecommendedCreators = async (limit = 12) => {
   }
 
   const params = new URLSearchParams({ limit: String(limit) });
-  const data = await fetchJson<RecommendedStreamsResponse>(`${RESOLVER_BASE_URL}/streams/recommended?${params}`, {
+  const data = await fetchJson<RecommendedStreamsResponse>(`${RESOLVER_BASE_URL}/recommended-lives?${params}`, {
     headers: {
       accept: 'application/json',
     },
