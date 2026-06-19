@@ -6,7 +6,9 @@ const GITHUB_PROFILE_URL = 'https://github.com/andredias20';
 
 interface HomePageProps {
     activeStreams: Stream[];
+    featuredCreatorsError: string | null;
     featuredCreators: CreatorProfile[];
+    isFeaturedCreatorsLoading: boolean;
     onAddStream: (id: string, platform: Platform, title?: string, chatIdentifier?: string) => void;
     onOpenAddModal: () => void;
     onOpenWatch: () => void;
@@ -25,9 +27,30 @@ const getInitials = (title: string) => {
         .join('');
 };
 
+const statusLabels = {
+    error: 'Erro',
+    live: 'Ao vivo',
+    offline: 'Offline',
+    unavailable: 'Indisponivel',
+    video: 'Video comum',
+};
+
+const getCreatorStatus = (creator: CreatorProfile, activeStream?: Stream) => {
+    const liveStatus = activeStream?.liveStatus ?? creator.liveStatus;
+
+    if (liveStatus === 'live') return 'live';
+    if (liveStatus === 'offline') return 'offline';
+    if (liveStatus === 'error') return 'error';
+    if (activeStream?.videoId || creator.videoId) return 'video';
+
+    return 'unavailable';
+};
+
 const HomePage: React.FC<HomePageProps> = ({
     activeStreams,
+    featuredCreatorsError,
     featuredCreators,
+    isFeaturedCreatorsLoading,
     onAddStream,
     onOpenAddModal,
     onOpenWatch,
@@ -83,7 +106,7 @@ const HomePage: React.FC<HomePageProps> = ({
                     <div className="stage-grid">
                         {activeStreams.slice(0, 4).map((stream) => (
                             <div className="stage-tile" key={`${stream.platform}-${stream.id}`}>
-                                <span>{stream.title || stream.id}</span>
+                                <span>{stream.title || stream.platform}</span>
                                 <small>{stream.platform}</small>
                             </div>
                         ))}
@@ -98,21 +121,54 @@ const HomePage: React.FC<HomePageProps> = ({
 
             <section className="home-section">
                 <div className="section-heading">
-                    <span>Criadores iniciais</span>
-                    <h2>Comece com a lista base</h2>
+                    <span>Recomendacoes</span>
+                    <h2>Lives recomendadas</h2>
                 </div>
 
-                <div className="creator-grid">
-                    {featuredCreators.map((creator) => {
+                {isFeaturedCreatorsLoading ? (
+                    <div className="creator-grid creator-grid--state" aria-busy="true">
+                        <span className="home-spinner" aria-hidden="true" />
+                        <p>Carregando recomendacoes...</p>
+                    </div>
+                ) : featuredCreatorsError ? (
+                    <div className="creator-grid creator-grid--state">
+                        <p>{featuredCreatorsError}</p>
+                    </div>
+                ) : featuredCreators.length === 0 ? (
+                    <div className="creator-grid creator-grid--state">
+                        <p>Nenhuma recomendacao disponivel.</p>
+                    </div>
+                ) : (
+                    <div className="creator-grid">
+                        {featuredCreators.map((creator) => {
                         const active = isStreamActive(activeStreams, creator);
+                        const activeStream = activeStreams.find((stream) => (
+                            stream.id === creator.id && stream.platform === creator.platform
+                        ));
+                        const status = getCreatorStatus(creator, activeStream);
+                        const streamTitle = activeStream?.title && activeStream.title !== creator.title
+                            ? activeStream.title
+                            : undefined;
 
                         return (
                             <article className="creator-card" key={`${creator.platform}-${creator.id}`}>
-                                <div className="creator-avatar">{getInitials(creator.title || creator.id)}</div>
+                                <div className="creator-avatar">
+                                    {creator.thumbnail ? (
+                                        <img src={creator.thumbnail} alt="" />
+                                    ) : (
+                                        <span>{getInitials(creator.title || creator.id)}</span>
+                                    )}
+                                </div>
                                 <div className="creator-info">
                                     <h3>{creator.title}</h3>
+                                    {streamTitle && <p className="creator-live-title">{streamTitle}</p>}
                                     <p>{creator.description}</p>
-                                    <code>{creator.handle || creator.id}</code>
+                                    <div className="creator-meta">
+                                        <span className={`creator-status creator-status--${status}`}>
+                                            {statusLabels[status]}
+                                        </span>
+                                        <span>{creator.platform}</span>
+                                    </div>
                                 </div>
                                 <button
                                     className={active ? 'creator-action active' : 'creator-action'}
@@ -124,8 +180,9 @@ const HomePage: React.FC<HomePageProps> = ({
                                 </button>
                             </article>
                         );
-                    })}
-                </div>
+                        })}
+                    </div>
+                )}
             </section>
         </main>
     );
