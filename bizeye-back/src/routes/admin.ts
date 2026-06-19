@@ -24,7 +24,9 @@ const uuidParamSchema = z.object({
   id: z.string().uuid(),
 });
 
-const channelIdSchema = z.string().trim().regex(/^UC[a-zA-Z0-9_-]{22}$/);
+const platformSchema = z.enum(['youtube', 'kick', 'twitch']);
+const youtubeChannelIdPattern = /^UC[a-zA-Z0-9_-]{22}$/;
+const channelIdSchema = z.string().trim().min(1).max(200);
 const videoIdSchema = z.string().trim().regex(/^[a-zA-Z0-9_-]{11}$/).or(z.literal(''));
 
 const loginSchema = z.object({
@@ -32,19 +34,47 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-const recommendedLiveCreateSchema = z.object({
+const recommendedLiveSchemaShape = {
+  chatIdentifier: z.string().trim().max(200).optional(),
   channelId: channelIdSchema,
   description: z.string().trim().max(500).optional(),
   displayName: z.string().trim().min(1).max(120),
-  enabled: z.boolean().default(true),
-  sortOrder: z.number().int().min(0).max(100_000).default(100),
+  enabled: z.boolean(),
+  sortOrder: z.number().int().min(0).max(100_000),
   thumbnailUrl: z.string().trim().url().or(z.literal('')).optional(),
   videoId: videoIdSchema.optional(),
+};
+
+const recommendedLiveCreateSchema = z.object({
+  ...recommendedLiveSchemaShape,
+  enabled: z.boolean().default(true),
+  platform: platformSchema.default('youtube'),
+  sortOrder: z.number().int().min(0).max(100_000).default(100),
+}).superRefine((value, ctx) => {
+  if (value.platform === 'youtube' && !youtubeChannelIdPattern.test(value.channelId)) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'invalid_youtube_channel_id',
+      path: ['channelId'],
+    });
+  }
 });
 
-const recommendedLivePatchSchema = recommendedLiveCreateSchema
+const recommendedLivePatchSchema = z.object({
+  ...recommendedLiveSchemaShape,
+  platform: platformSchema.optional(),
+})
   .partial()
-  .refine((value) => Object.keys(value).length > 0);
+  .refine((value) => Object.keys(value).length > 0)
+  .superRefine((value, ctx) => {
+    if (value.channelId !== undefined && (value.platform ?? 'youtube') === 'youtube' && !youtubeChannelIdPattern.test(value.channelId)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'invalid_youtube_channel_id',
+        path: ['channelId'],
+      });
+    }
+  });
 
 const recommendedLiveReorderSchema = z.object({
   items: z.array(

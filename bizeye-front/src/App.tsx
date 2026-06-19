@@ -8,7 +8,6 @@ import AdminLoginPage from './pages/AdminLoginPage'
 import FireTvPage from './pages/FireTvPage'
 import HomePage from './pages/HomePage'
 import WatchPage from './pages/WatchPage'
-import { featuredCreators as fallbackFeaturedCreators, starterStreams } from './data/creators'
 import { isFireTvLikeDevice } from './platform/fireTv'
 import { resolveKickInput } from './services/kickResolver'
 import { fetchRecommendedCreators } from './services/recommendedStreams'
@@ -81,29 +80,28 @@ const getPageFromHash = (): AppPage => {
 
 const getInitialStreamsState = (): InitialStreamsState => {
   const storedStreams = loadStoredStreams();
-  const streams = storedStreams === null
-    ? starterStreams
-    : mergeKnownStreamMetadata(storedStreams, starterStreams);
-
-  saveStoredStreams(streams);
 
   return {
     hadStoredStreams: storedStreams !== null,
-    streams,
+    streams: storedStreams ?? [],
   };
 };
 
 const recommendedCreatorToStream = (creator: CreatorProfile): Stream => ({
   chatIdentifier: creator.chatIdentifier,
   id: creator.id,
+  liveStatus: creator.liveStatus,
   platform: creator.platform,
   title: creator.title,
+  videoId: creator.videoId,
 });
 
 function App() {
   const [initialStreamsState] = useState(getInitialStreamsState);
   const [activeStreams, setActiveStreams] = useState<Stream[]>(initialStreamsState.streams);
-  const [featuredCreators, setFeaturedCreators] = useState<CreatorProfile[]>(fallbackFeaturedCreators);
+  const [featuredCreators, setFeaturedCreators] = useState<CreatorProfile[]>([]);
+  const [featuredCreatorsError, setFeaturedCreatorsError] = useState<string | null>(null);
+  const [isFeaturedCreatorsLoading, setIsFeaturedCreatorsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<AppPage>(getPageFromHash);
   const [bizeyeResolveFlagValue, setBizeyeResolveFlagValue] = useState(getInitialBizeyeResolveFlagValue);
@@ -168,9 +166,10 @@ function App() {
 
     fetchRecommendedCreators()
       .then((creators) => {
-        if (isCancelled || creators.length === 0) return;
+        if (isCancelled) return;
 
         setFeaturedCreators(creators);
+        setFeaturedCreatorsError(null);
         updateActiveStreams((streams) => {
           const recommendedStreams = creators.map(recommendedCreatorToStream);
 
@@ -180,7 +179,14 @@ function App() {
         });
       })
       .catch((error) => {
-        console.warn('bizeye-recommendations: backend recommendations unavailable; using local fallback.', error);
+        if (isCancelled) return;
+
+        console.warn('bizeye-recommendations: backend recommendations unavailable.', error);
+        setFeaturedCreators([]);
+        setFeaturedCreatorsError('Nao foi possivel carregar as recomendacoes.');
+      })
+      .finally(() => {
+        if (!isCancelled) setIsFeaturedCreatorsLoading(false);
       });
 
     return () => {
@@ -382,7 +388,9 @@ function App() {
       ) : (
         <HomePage
           activeStreams={activeStreams}
+          featuredCreatorsError={featuredCreatorsError}
           featuredCreators={featuredCreators}
+          isFeaturedCreatorsLoading={isFeaturedCreatorsLoading}
           onAddStream={addStream}
           onOpenAddModal={() => setIsModalOpen(true)}
           onOpenWatch={() => navigateTo('watch')}

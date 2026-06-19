@@ -29,6 +29,7 @@ const normalizeCreator = (value: CreatorProfile): CreatorProfile | null => {
     description: value.description?.trim() || 'Live recomendada pelo BizEye.',
     handle: value.handle?.trim() || undefined,
     id,
+    liveStatus: value.liveStatus,
     platform: value.platform,
     recommendationId: value.recommendationId?.trim() || undefined,
     thumbnail: value.thumbnail?.trim() || undefined,

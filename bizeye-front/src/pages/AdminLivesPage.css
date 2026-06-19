@@ -36,16 +36,19 @@
 .admin-search-row button,
 .admin-search-result button,
 .admin-live-actions button,
+.admin-live-actions a,
 .admin-primary-button {
     border: 0;
     border-radius: 8px;
     cursor: pointer;
     font-weight: 850;
+    text-decoration: none;
 }
 
 .admin-header-actions button,
 .admin-panel-heading button,
-.admin-live-actions button {
+.admin-live-actions button,
+.admin-live-actions a {
     min-height: 36px;
     border: 1px solid var(--border-soft);
     background: rgba(255, 255, 255, 0.055);
@@ -95,7 +98,8 @@
     font-size: 1rem;
 }
 
-.admin-live-form label {
+.admin-live-form label,
+.admin-search-platform {
     display: grid;
     gap: 0.35rem;
     color: var(--text-soft);
@@ -105,6 +109,8 @@
 
 .admin-live-form input,
 .admin-live-form textarea,
+.admin-live-form select,
+.admin-search-platform select,
 .admin-search-row input {
     width: 100%;
     border: 1px solid var(--border-soft);
@@ -116,6 +122,8 @@
 }
 
 .admin-live-form input,
+.admin-live-form select,
+.admin-search-platform select,
 .admin-search-row input {
     min-height: 40px;
 }
@@ -126,6 +134,8 @@
 
 .admin-live-form input:focus,
 .admin-live-form textarea:focus,
+.admin-live-form select:focus,
+.admin-search-platform select:focus,
 .admin-search-row input:focus {
     border-color: rgba(34, 211, 238, 0.58);
     box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
@@ -295,6 +305,12 @@
     max-width: 250px;
 }
 
+.admin-live-actions a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .admin-live-actions .danger {
     border-color: rgba(255, 77, 109, 0.3);
     color: #ff8da1;
@@ -340,7 +356,8 @@
         width: 100%;
     }
 
-    .admin-live-actions button {
+    .admin-live-actions button,
+    .admin-live-actions a {
         flex: 1 1 46%;
     }
 

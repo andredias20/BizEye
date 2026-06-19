@@ -1,4 +1,4 @@
-import type { CreatorProfile } from '../types';
+import type { CreatorProfile, Platform } from '../types';
 import type { YoutubeChannelResult } from './youtubeResolver';
 
 const RESOLVER_BASE_URL = (import.meta.env.VITE_RESOLVER_BASE_URL || '').replace(/\/+$/, '');
@@ -17,6 +17,7 @@ export type AdminUser = {
 };
 
 export type AdminRecommendedLive = {
+  chatIdentifier?: string;
   channelId: string;
   createdAt: string;
   createdBy?: string;
@@ -24,6 +25,7 @@ export type AdminRecommendedLive = {
   displayName: string;
   enabled: boolean;
   id: string;
+  platform: Platform;
   sortOrder: number;
   thumbnailUrl?: string;
   updatedAt: string;
@@ -31,10 +33,12 @@ export type AdminRecommendedLive = {
 };
 
 export type RecommendedLiveInput = {
+  chatIdentifier?: string;
   channelId: string;
   description?: string;
   displayName: string;
   enabled: boolean;
+  platform: Platform;
   sortOrder: number;
   thumbnailUrl?: string;
   videoId?: string;
@@ -154,9 +158,10 @@ export const searchAdminYoutubeChannels = async (query: string, maxResults = 6) 
 };
 
 export const adminLiveToCreator = (item: AdminRecommendedLive): CreatorProfile => ({
+  chatIdentifier: item.chatIdentifier,
   description: item.description || 'Live recomendada pelo BizEye.',
   id: item.channelId,
-  platform: 'youtube',
+  platform: item.platform,
   thumbnail: item.thumbnailUrl,
   title: item.displayName,
   videoId: item.videoId,
