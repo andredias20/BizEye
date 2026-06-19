@@ -27,6 +27,16 @@ export type YoutubeLiveStatusResult = {
   videoId?: string | null;
 };
 
+export type YoutubeVideoMetadata = {
+  channelTitle?: string;
+  duration?: string;
+  durationSeconds?: number;
+  embeddable?: boolean;
+  id: string;
+  thumbnail?: string;
+  title: string;
+};
+
 type BackendSearchResponse = {
   items?: YoutubeChannelResult[];
 };
@@ -38,6 +48,14 @@ type BackendLiveResponse = {
 
 type BackendLiveStatusesResponse = {
   items?: YoutubeLiveStatusResult[];
+};
+
+type BackendVideoMetadataResponse = YoutubeVideoMetadata;
+
+type YoutubeOEmbedResponse = {
+  author_name?: string;
+  thumbnail_url?: string;
+  title?: string;
 };
 
 const shouldUseBackendResolver = async () => {
@@ -131,6 +149,27 @@ const recordLiveVideoWithBackend = async (channelId: string, videoId: string) =>
   });
 };
 
+const fetchVideoMetadataWithBackend = async (videoId: string) => {
+  return fetchJson<BackendVideoMetadataResponse>(
+    `${RESOLVER_BASE_URL}/youtube/videos/${encodeURIComponent(videoId)}/metadata`,
+  );
+};
+
+const fetchVideoMetadataWithOEmbed = async (videoId: string): Promise<YoutubeVideoMetadata> => {
+  const url = new URL('https://www.youtube.com/oembed');
+  url.searchParams.set('format', 'json');
+  url.searchParams.set('url', `https://www.youtube.com/watch?v=${videoId}`);
+
+  const data = await fetchJson<YoutubeOEmbedResponse>(url.toString());
+
+  return {
+    channelTitle: data.author_name,
+    id: videoId,
+    thumbnail: data.thumbnail_url,
+    title: data.title || videoId,
+  };
+};
+
 export const searchYoutubeChannels = async (query: string, maxResults = 6) => {
   if (await shouldUseBackendResolver()) {
     try {
@@ -195,4 +234,26 @@ export const recordYoutubeLiveVideoId = async (channelId: string, videoId: strin
     console.warn(`${BIZEYE_RESOLVE_FLAG_KEY}: failed to record live video observation.`, error);
     return null;
   }
+};
+
+export const fetchYoutubeVideoMetadata = async (videoId: string): Promise<YoutubeVideoMetadata> => {
+  if (await shouldUseBackendResolver()) {
+    try {
+      return await fetchVideoMetadataWithBackend(videoId);
+    } catch (error) {
+      warnBackendUnavailable('video metadata', error);
+    }
+  }
+
+  try {
+    return await fetchVideoMetadataWithOEmbed(videoId);
+  } catch (error) {
+    console.warn(`${BIZEYE_RESOLVE_FLAG_KEY}: YouTube oEmbed metadata failed.`, error);
+  }
+
+  return {
+    id: videoId,
+    thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+    title: videoId,
+  };
 };

@@ -43,6 +43,36 @@ type YouTubeChannelListResponse = {
   }>;
 };
 
+type YouTubeVideosResponse = {
+  items?: Array<{
+    contentDetails?: {
+      duration?: string;
+    };
+    id?: string;
+    snippet?: {
+      channelTitle?: string;
+      thumbnails?: {
+        high?: {
+          url?: string;
+        };
+        maxres?: {
+          url?: string;
+        };
+        medium?: {
+          url?: string;
+        };
+        standard?: {
+          url?: string;
+        };
+      };
+      title?: string;
+    };
+    status?: {
+      embeddable?: boolean;
+    };
+  }>;
+};
+
 const resolveInputSchema = z.object({
   input: z.string().trim().min(1),
 });
@@ -54,6 +84,8 @@ const liveStatusSchema = z.object({
 const liveObservationSchema = z.object({
   videoId: z.string().trim().regex(/^[a-zA-Z0-9_-]{11}$/),
 });
+
+const videoIdSchema = z.string().trim().regex(/^[a-zA-Z0-9_-]{11}$/);
 
 const chatSourceSchema = z.object({
   liveChatId: z.string().trim().min(1).optional(),
@@ -252,6 +284,45 @@ youtubeRoutes.post('/channels/resolve', async (c) => {
   } catch (error) {
     console.error('YouTube channel resolve failed.', error);
     return c.json({ error: 'youtube_resolve_failed' }, 502);
+  }
+});
+
+youtubeRoutes.get('/videos/:videoId/metadata', async (c) => {
+  const parsed = videoIdSchema.safeParse(c.req.param('videoId'));
+
+  if (!parsed.success) {
+    return c.json({ error: 'invalid_video_id' }, 400);
+  }
+
+  try {
+    const data = await fetchYouTubeJson<YouTubeVideosResponse>({
+      path: '/videos',
+      params: {
+        id: parsed.data,
+        part: 'snippet,contentDetails,status',
+      },
+    });
+
+    const video = data.items?.[0];
+    if (!video?.id) {
+      return c.json({ error: 'video_not_found' }, 404);
+    }
+
+    return c.json({
+      channelTitle: video.snippet?.channelTitle,
+      duration: video.contentDetails?.duration,
+      embeddable: video.status?.embeddable,
+      id: video.id,
+      thumbnail:
+        video.snippet?.thumbnails?.maxres?.url ??
+        video.snippet?.thumbnails?.standard?.url ??
+        video.snippet?.thumbnails?.high?.url ??
+        video.snippet?.thumbnails?.medium?.url,
+      title: video.snippet?.title || video.id,
+    });
+  } catch (error) {
+    console.error('YouTube video metadata failed.', error);
+    return c.json({ error: 'youtube_video_metadata_failed' }, 502);
   }
 });
 

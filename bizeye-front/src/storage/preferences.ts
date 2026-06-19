@@ -1,8 +1,9 @@
-import type { ChatPanelPosition, Platform, Stream, ViewLayoutMode } from '../types';
+import type { ChatPanelPosition, Platform, Stream, ViewLayoutMode, YouTubeQueueItem } from '../types';
 
 const STREAMS_STORAGE_KEY = 'bizeye.streams.v1';
 const WATCH_CHAT_POSITION_STORAGE_KEY = 'bizeye.watchChatPosition.v1';
 const WATCH_LAYOUT_STORAGE_KEY = 'bizeye.watchLayout.v1';
+const YOUTUBE_QUEUE_STORAGE_KEY = 'bizeye.youtubeQueue.v1';
 
 const chatPanelPositions: ChatPanelPosition[] = ['left', 'right', 'bottom'];
 const platforms: Platform[] = ['youtube', 'twitch', 'kick'];
@@ -47,11 +48,66 @@ const normalizeStream = (value: unknown): Stream | null => {
     };
 };
 
+const normalizeQueueItem = (value: unknown): YouTubeQueueItem | null => {
+    if (!value || typeof value !== 'object') return null;
+
+    const candidate = value as Partial<Record<keyof YouTubeQueueItem, unknown>>;
+    const id = typeof candidate.id === 'string' ? candidate.id.trim() : '';
+    const title = typeof candidate.title === 'string' && candidate.title.trim() ? candidate.title.trim() : id;
+    const url = typeof candidate.url === 'string' && candidate.url.trim()
+        ? candidate.url.trim()
+        : `https://www.youtube.com/watch?v=${id}`;
+
+    if (!/^[a-zA-Z0-9_-]{11}$/.test(id) || !title) {
+        return null;
+    }
+
+    const startSeconds = typeof candidate.startSeconds === 'number' && Number.isFinite(candidate.startSeconds)
+        ? Math.max(0, Math.floor(candidate.startSeconds))
+        : undefined;
+    const durationSeconds = typeof candidate.durationSeconds === 'number' && Number.isFinite(candidate.durationSeconds)
+        ? Math.max(0, Math.floor(candidate.durationSeconds))
+        : undefined;
+    const addedAt = typeof candidate.addedAt === 'string' && candidate.addedAt.trim()
+        ? candidate.addedAt.trim()
+        : new Date().toISOString();
+
+    return {
+        addedAt,
+        channelTitle: typeof candidate.channelTitle === 'string' && candidate.channelTitle.trim()
+            ? candidate.channelTitle.trim()
+            : undefined,
+        duration: typeof candidate.duration === 'string' && candidate.duration.trim()
+            ? candidate.duration.trim()
+            : undefined,
+        durationSeconds,
+        id,
+        startSeconds,
+        thumbnail: typeof candidate.thumbnail === 'string' && candidate.thumbnail.trim()
+            ? candidate.thumbnail.trim()
+            : undefined,
+        title,
+        url,
+    };
+};
+
 const uniqueStreams = (streams: Stream[]) => {
     const seen = new Set<string>();
 
     return streams.filter((stream) => {
         const key = `${stream.platform}:${stream.id}`;
+        if (seen.has(key)) return false;
+
+        seen.add(key);
+        return true;
+    });
+};
+
+const uniqueQueueItems = (items: YouTubeQueueItem[]) => {
+    const seen = new Set<string>();
+
+    return items.filter((item) => {
+        const key = `${item.id}:${item.startSeconds ?? 0}`;
         if (seen.has(key)) return false;
 
         seen.add(key);
@@ -143,5 +199,32 @@ export const saveStoredWatchChatPosition = (position: ChatPanelPosition) => {
         window.localStorage.setItem(WATCH_CHAT_POSITION_STORAGE_KEY, position);
     } catch (error) {
         console.warn('Could not save BizEye watch chat position to localStorage:', error);
+    }
+};
+
+export const loadStoredYoutubeQueue = () => {
+    if (!canUseLocalStorage()) return [];
+
+    try {
+        const rawQueue = window.localStorage.getItem(YOUTUBE_QUEUE_STORAGE_KEY);
+        if (rawQueue === null) return [];
+
+        const parsed = JSON.parse(rawQueue) as unknown;
+        if (!Array.isArray(parsed)) return [];
+
+        return uniqueQueueItems(parsed.map(normalizeQueueItem).filter((item): item is YouTubeQueueItem => Boolean(item)));
+    } catch (error) {
+        console.warn('Could not load BizEye YouTube queue from localStorage:', error);
+        return [];
+    }
+};
+
+export const saveStoredYoutubeQueue = (items: YouTubeQueueItem[]) => {
+    if (!canUseLocalStorage()) return;
+
+    try {
+        window.localStorage.setItem(YOUTUBE_QUEUE_STORAGE_KEY, JSON.stringify(uniqueQueueItems(items)));
+    } catch (error) {
+        console.warn('Could not save BizEye YouTube queue to localStorage:', error);
     }
 };
