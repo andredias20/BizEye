@@ -6,6 +6,7 @@ import { secureHeaders } from 'hono/secure-headers';
 import { getOptionalServerEnv } from './config/env.js';
 import { healthRoutes } from './routes/health.js';
 import { internalRoutes } from './routes/internal.js';
+import { recommendedStreamRoutes } from './routes/recommendedStreams.js';
 import { streamRoutes } from './routes/stream.js';
 import { youtubeRoutes } from './routes/youtube.js';
 
@@ -57,6 +58,7 @@ export const createApp = () => {
   app.route('/', healthRoutes);
   app.route('/internal', internalRoutes);
   app.route('/stream', streamRoutes);
+  app.route('/streams', recommendedStreamRoutes);
   app.route('/youtube', youtubeRoutes);
 
   return app;

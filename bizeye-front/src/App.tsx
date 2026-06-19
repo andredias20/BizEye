@@ -6,9 +6,10 @@ import AddStreamModal from './components/AddStreamModal'
 import FireTvPage from './pages/FireTvPage'
 import HomePage from './pages/HomePage'
 import WatchPage from './pages/WatchPage'
-import { starterStreams } from './data/creators'
+import { featuredCreators as fallbackFeaturedCreators, starterStreams } from './data/creators'
 import { isFireTvLikeDevice } from './platform/fireTv'
 import { resolveKickInput } from './services/kickResolver'
+import { fetchRecommendedCreators } from './services/recommendedStreams'
 import { fetchYoutubeLiveStatuses } from './services/youtubeResolver'
 import {
   flagDefinitions,
@@ -30,9 +31,14 @@ import {
   saveStoredWatchLayout,
 } from './storage/preferences'
 
-import type { ChatPanelPosition, ChatTransport, Platform, Stream, ViewLayoutMode } from './types'
+import type { ChatPanelPosition, ChatTransport, CreatorProfile, Platform, Stream, ViewLayoutMode } from './types'
 
 type AppPage = 'firetv' | 'home' | 'watch';
+
+type InitialStreamsState = {
+  hadStoredStreams: boolean;
+  streams: Stream[];
+};
 
 const getPageFromHash = (): AppPage => {
   const hashRoute = window.location.hash.replace(/^#\/?/, '').replace(/\/$/, '');
@@ -54,16 +60,31 @@ const getPageFromHash = (): AppPage => {
   return 'home';
 };
 
-function App() {
-  const [activeStreams, setActiveStreams] = useState<Stream[]>(() => {
-    const storedStreams = loadStoredStreams();
-    const streams = storedStreams === null
-      ? starterStreams
-      : mergeKnownStreamMetadata(storedStreams, starterStreams);
+const getInitialStreamsState = (): InitialStreamsState => {
+  const storedStreams = loadStoredStreams();
+  const streams = storedStreams === null
+    ? starterStreams
+    : mergeKnownStreamMetadata(storedStreams, starterStreams);
 
-    saveStoredStreams(streams);
-    return streams;
-  });
+  saveStoredStreams(streams);
+
+  return {
+    hadStoredStreams: storedStreams !== null,
+    streams,
+  };
+};
+
+const recommendedCreatorToStream = (creator: CreatorProfile): Stream => ({
+  chatIdentifier: creator.chatIdentifier,
+  id: creator.id,
+  platform: creator.platform,
+  title: creator.title,
+});
+
+function App() {
+  const [initialStreamsState] = useState(getInitialStreamsState);
+  const [activeStreams, setActiveStreams] = useState<Stream[]>(initialStreamsState.streams);
+  const [featuredCreators, setFeaturedCreators] = useState<CreatorProfile[]>(fallbackFeaturedCreators);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<AppPage>(getPageFromHash);
   const [bizeyeResolveFlagValue, setBizeyeResolveFlagValue] = useState(getInitialBizeyeResolveFlagValue);
@@ -74,7 +95,7 @@ function App() {
   const [chatPanelPosition, setChatPanelPosition] = useState<ChatPanelPosition>(() => loadStoredWatchChatPosition('right'));
   const [layoutMode, setLayoutMode] = useState<ViewLayoutMode>(() => loadStoredWatchLayout('balanced'));
   const didAutoRedirectFireTv = useRef(false);
-  const didRefreshInitialLives = useRef(false);
+  const refreshedYoutubeChannels = useRef(new Set<string>());
   const attemptedKickChatroomResolutions = useRef(new Set<string>());
 
   useEffect(() => {
@@ -123,6 +144,31 @@ function App() {
     });
   }, []);
 
+  useEffect(() => {
+    let isCancelled = false;
+
+    fetchRecommendedCreators()
+      .then((creators) => {
+        if (isCancelled || creators.length === 0) return;
+
+        setFeaturedCreators(creators);
+        updateActiveStreams((streams) => {
+          const recommendedStreams = creators.map(recommendedCreatorToStream);
+
+          return initialStreamsState.hadStoredStreams
+            ? mergeKnownStreamMetadata(streams, recommendedStreams)
+            : recommendedStreams;
+        });
+      })
+      .catch((error) => {
+        console.warn('bizeye-recommendations: backend recommendations unavailable; using local fallback.', error);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [initialStreamsState.hadStoredStreams, updateActiveStreams]);
+
   const applyYoutubeLiveStatuses = useCallback((statuses: Awaited<ReturnType<typeof fetchYoutubeLiveStatuses>>) => {
     if (statuses.length === 0) return;
 
@@ -159,14 +205,13 @@ function App() {
   }, [applyYoutubeLiveStatuses]);
 
   useEffect(() => {
-    if (didRefreshInitialLives.current) return;
-    didRefreshInitialLives.current = true;
-
     const channelIds = activeStreams
       .filter((stream) => stream.platform === 'youtube' && stream.id.startsWith('UC'))
-      .map((stream) => stream.id);
+      .map((stream) => stream.id)
+      .filter((channelId) => !refreshedYoutubeChannels.current.has(channelId));
 
     if (channelIds.length === 0) return;
+    channelIds.forEach((channelId) => refreshedYoutubeChannels.current.add(channelId));
 
     let isCancelled = false;
 
@@ -305,7 +350,6 @@ function App() {
           chatPanelPosition={chatPanelPosition}
           chatTransport={bizeyeChatTransportFlagValue}
           layoutMode={layoutMode}
-          onAddStream={() => setIsModalOpen(true)}
           onChatPanelPositionChange={changeChatPanelPosition}
           onLayoutModeChange={changeLayoutMode}
           onLiveVideoResolved={updateYoutubeLiveVideo}
@@ -315,6 +359,7 @@ function App() {
       ) : (
         <HomePage
           activeStreams={activeStreams}
+          featuredCreators={featuredCreators}
           onAddStream={addStream}
           onOpenAddModal={() => setIsModalOpen(true)}
           onOpenWatch={() => navigateTo('watch')}

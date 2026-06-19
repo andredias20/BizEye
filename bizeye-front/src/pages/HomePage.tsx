@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import './HomePage.css';
-import { featuredCreators } from '../data/creators';
 import { searchYoutubeChannels } from '../services/youtubeResolver';
 
 import type { CreatorProfile, Platform, Stream } from '../types';
@@ -8,9 +7,12 @@ import type { YoutubeChannelResult } from '../services/youtubeResolver';
 
 type ChannelResult = YoutubeChannelResult;
 
+const GITHUB_PROFILE_URL = 'https://github.com/andredias20';
+
 interface HomePageProps {
     activeStreams: Stream[];
-    onAddStream: (id: string, platform: Platform, title?: string) => void;
+    featuredCreators: CreatorProfile[];
+    onAddStream: (id: string, platform: Platform, title?: string, chatIdentifier?: string) => void;
     onOpenAddModal: () => void;
     onOpenWatch: () => void;
 }
@@ -28,14 +30,20 @@ const getInitials = (title: string) => {
         .join('');
 };
 
-const HomePage: React.FC<HomePageProps> = ({ activeStreams, onAddStream, onOpenAddModal, onOpenWatch }) => {
+const HomePage: React.FC<HomePageProps> = ({
+    activeStreams,
+    featuredCreators,
+    onAddStream,
+    onOpenAddModal,
+    onOpenWatch,
+}) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<ChannelResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [searchError, setSearchError] = useState<string | null>(null);
 
     const handleFeaturedAdd = (creator: CreatorProfile) => {
-        onAddStream(creator.id, creator.platform, creator.title);
+        onAddStream(creator.id, creator.platform, creator.title, creator.chatIdentifier);
     };
 
     const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -82,6 +90,9 @@ const HomePage: React.FC<HomePageProps> = ({ activeStreams, onAddStream, onOpenA
                         <button className="secondary-action" type="button" onClick={onOpenAddModal}>
                             Inserir canal
                         </button>
+                        <a className="github-action" href={GITHUB_PROFILE_URL} rel="noreferrer" target="_blank">
+                            GitHub
+                        </a>
                     </div>
                     <div className="hero-metrics" aria-label="Resumo">
                         <div>
@@ -136,7 +147,7 @@ const HomePage: React.FC<HomePageProps> = ({ activeStreams, onAddStream, onOpenA
                                 <div className="creator-info">
                                     <h3>{creator.title}</h3>
                                     <p>{creator.description}</p>
-                                    <code>{creator.id}</code>
+                                    <code>{creator.handle || creator.id}</code>
                                 </div>
                                 <button
                                     className={active ? 'creator-action active' : 'creator-action'}

@@ -7,6 +7,7 @@ export const starterStreams: Stream[] = [
     { id: 'UCZiYbVptd3PVPf4f6eR6UaQ', platform: 'youtube', title: 'CazeTV' },
 ];
 
+// Local fallback used before the backend recommendations route responds.
 export const featuredCreators: CreatorProfile[] = [
     {
         id: 'UCvgSmIdI92W4KnP15fJwfwA',

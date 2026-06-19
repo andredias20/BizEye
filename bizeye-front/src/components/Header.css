@@ -173,11 +173,6 @@
 
 @media (max-width: 460px) {
     .header-action {
-        width: 34px;
-        padding: 0;
-    }
-
-    .header-action-text {
-        display: none;
+        padding: 0 0.75rem;
     }
 }

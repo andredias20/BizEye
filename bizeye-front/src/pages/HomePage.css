@@ -66,6 +66,7 @@
 
 .primary-action,
 .secondary-action,
+.github-action,
 .channel-search button,
 .creator-action,
 .result-card button {
@@ -84,11 +85,26 @@
 }
 
 .secondary-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-height: 48px;
     padding: 0 1.35rem;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid var(--border-soft);
     color: var(--text);
+}
+
+.github-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: #f8fafc;
+    color: #02040a;
+    text-decoration: none;
 }
 
 .hero-metrics {

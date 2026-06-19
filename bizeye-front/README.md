@@ -29,9 +29,15 @@ The frontend reads Vercel flags through the serverless endpoint `api/flags.ts`.
 - Local Vite dev uses `VITE_FEATURE_BIZEYE_RESOLVE` as the fallback value because Vite does not run Vercel Functions.
 - For local testing, override the values in the browser with `localStorage.setItem('bizeye-resolve', 'true')`, `localStorage.setItem('bizeye-chat-merge', 'true')`, and `localStorage.setItem('bizeye-chat-transport', 'websocket')`, or remove the keys to use the environment/default values again.
 
+## Recommended Streams
+
+The Home recommendations and first-run Watch list are loaded from the backend route `GET /streams/recommended` when `VITE_RESOLVER_BASE_URL` is configured. The frontend keeps a local fallback with the original starter streams so the app remains usable if the backend is unavailable.
+
+The backend reads active rows from `public.recommended_streams`, ordered by `display_order`, and returns short-lived HTTP cache headers for Vercel/CDN caching. Update that table to switch a recommendation between YouTube, Twitch, and Kick without redeploying the frontend.
+
 ## YouTube Live Resolution
 
-The base Watch list is fixed to ACF, Tonimec, and EEBrasil. On page load/F5, the frontend asks the backend for cached live status for active YouTube channel IDs.
+On page load/F5, the frontend asks the backend for cached live status for active YouTube channel IDs.
 
 - Fresh `channelId -> videoId` cache is used without calling the YouTube API.
 - Expired live cache is validated by the backend before being reused.

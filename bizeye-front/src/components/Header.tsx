@@ -85,8 +85,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, streamCount, onAddStream, 
 
       <div className="header-right">
         <button className="header-action" onClick={onAddStream} type="button">
-          <span aria-hidden="true">+</span>
-          <span className="header-action-text">Creator</span>
+          Adicionar
         </button>
         <button
           aria-label={isFullscreen ? 'Sair do fullscreen' : 'Entrar em fullscreen'}

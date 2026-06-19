@@ -145,6 +145,7 @@ Use `SUPABASE_SERVICE_ROLE_KEY` only in this backend. Never expose it to `bizeye
 - `GET /health`
 - `GET /ready`
 - `GET /internal/cron/live-check`
+- `GET /streams/recommended`
 - `GET /youtube/channels/search?q=ACF`
 - `POST /youtube/channels/resolve`
 - `POST /youtube/channels/live-status`

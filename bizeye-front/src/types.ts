@@ -23,6 +23,8 @@ export interface Stream {
 }
 
 export interface CreatorProfile extends Stream {
+    recommendationId?: string;
     handle?: string;
+    thumbnail?: string;
     description: string;
 }

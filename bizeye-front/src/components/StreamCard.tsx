@@ -28,9 +28,53 @@ const StreamCard: React.FC<StreamCardProps> = ({
     const [volume, setVolume] = useState(50);
     const [hasSignal, setHasSignal] = useState(true);
     const [channelName, setChannelName] = useState<string | null>(title || null);
+    const [playerReloadKey, setPlayerReloadKey] = useState(0);
 
-    const toggleMute = () => setIsMuted(!isMuted);
+    const reloadPlayerForAudio = () => {
+        if (platform === 'kick' || platform === 'twitch') {
+            setPlayerReloadKey((currentKey) => currentKey + 1);
+        }
+    };
+
+    const setMutedWithPlayerSync = (nextMuted: boolean) => {
+        setIsMuted(nextMuted);
+
+        if (nextMuted !== isMuted) {
+            reloadPlayerForAudio();
+        }
+    };
+
+    const toggleMute = () => {
+        const nextMuted = !isMuted;
+
+        if (!nextMuted && volume === 0) {
+            setVolume(50);
+        }
+
+        setMutedWithPlayerSync(nextMuted);
+    };
+
+    const handleVolumeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const nextVolume = Number(event.target.value);
+        const nextMuted = nextVolume === 0;
+
+        setVolume(nextVolume);
+        setMutedWithPlayerSync(nextMuted);
+    };
+
+    const handleVolumeCommit = (event: React.SyntheticEvent<HTMLInputElement>) => {
+        if (platform === 'kick') {
+            setVolume(Number(event.currentTarget.value));
+            reloadPlayerForAudio();
+        }
+    };
+
     const className = playbackProfile === 'firetv' ? 'stream-card stream-card--firetv' : 'stream-card';
+    const playerKey = platform === 'youtube'
+        ? `${platform}-${streamId}`
+        : `${platform}-${streamId}-${playerReloadKey}`;
+    const showVolumeControls = playbackProfile !== 'firetv';
+    const displayedVolume = isMuted ? 0 : volume;
 
     return (
         <div className={className}>
@@ -69,27 +113,55 @@ const StreamCard: React.FC<StreamCardProps> = ({
                 </div>
             </div>
 
-            {/* Click Overlay to Mute/Unmute (Disabled for Twitch/Kick to allow native controls/compliance) */}
-            {platform !== 'kick' && platform !== 'twitch' && (
-                <div
-                    className="click-overlay"
-                    onClick={toggleMute}
-                    title={isMuted ? "Click to Unmute" : "Click to Mute"}
-                >
+            <button
+                aria-label={isMuted ? 'Ativar som' : 'Mutar stream'}
+                className="click-overlay"
+                onClick={toggleMute}
+                title={isMuted ? 'Click to Unmute' : 'Click to Mute'}
+                type="button"
+            />
+
+            {showVolumeControls && (
+                <div className="card-controls bottom permanent">
+                    <div className="volume-control">
+                        <button
+                            aria-label={isMuted ? 'Ativar som' : 'Mutar stream'}
+                            className="mute-btn-icon"
+                            onClick={toggleMute}
+                            title={isMuted ? 'Ativar som' : 'Mutar stream'}
+                            type="button"
+                        >
+                            {isMuted ? (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5L6 9H2v6h4l5 4V5z" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
+                            ) : (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
+                            )}
+                        </button>
+                        <input
+                            aria-label={`Volume ${channelName || title || streamId}`}
+                            max="100"
+                            min="0"
+                            onChange={handleVolumeChange}
+                            onKeyUp={handleVolumeCommit}
+                            onPointerUp={handleVolumeCommit}
+                            type="range"
+                            value={displayedVolume}
+                        />
+                        <span className="volume-percentage">{displayedVolume}%</span>
+                    </div>
                 </div>
             )}
 
             {/* Video Player Core */}
             <div className="player-wrapper">
                 <VideoPlayer
+                    key={playerKey}
                     streamId={streamId}
                     liveStatus={liveStatus}
                     platform={platform}
                     videoId={videoId}
                     isMuted={isMuted}
-                    setIsMuted={setIsMuted}
                     volume={volume}
-                    setVolume={setVolume}
                     onLiveVideoResolved={onLiveVideoResolved}
                     onSignalError={() => setHasSignal(false)}
                     playbackProfile={playbackProfile}

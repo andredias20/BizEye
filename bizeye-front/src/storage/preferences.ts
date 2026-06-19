@@ -84,6 +84,7 @@ export const mergeKnownStreamMetadata = (streams: Stream[], fixedStreams: Stream
 
         return {
             ...stream,
+            chatIdentifier: fixed.chatIdentifier ?? stream.chatIdentifier,
             title: fixed.title,
         };
     });

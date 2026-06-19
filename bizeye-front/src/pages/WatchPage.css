@@ -202,10 +202,6 @@
     max-height: none;
 }
 
-.watch-page:fullscreen .fab-container {
-    display: none;
-}
-
 @media (max-width: 700px) {
     .watch-toolbar {
         align-items: stretch;

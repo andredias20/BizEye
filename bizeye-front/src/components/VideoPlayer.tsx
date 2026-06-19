@@ -11,9 +11,7 @@ interface VideoPlayerProps {
     videoId?: string;
     isMuted: boolean;
     playbackProfile?: PlaybackProfile;
-    setIsMuted: (muted: boolean) => void;
     volume: number;
-    setVolume: (volume: number) => void;
     onLiveVideoResolved: (channelId: string, videoId: string, title?: string) => void;
     onSignalError: () => void;
     onMetadata?: (data: { author: string; title: string }) => void;
@@ -30,7 +28,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = (props) => {
         case 'kick':
             return (
                 <KickPlayer
+                    isMuted={props.isMuted}
                     streamId={props.streamId}
+                    volume={props.volume}
                     onSignalError={props.onSignalError}
                 />
             );

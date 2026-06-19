@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import './WatchPage.css';
-import AddStreamButton from '../components/AddStreamButton';
 import MergedYouTubeChatPanel from '../components/MergedYouTubeChatPanel';
 import StreamDashboard from '../components/StreamDashboard';
 
@@ -11,7 +10,6 @@ interface WatchPageProps {
     chatPanelPosition: ChatPanelPosition;
     chatTransport: ChatTransport;
     layoutMode: ViewLayoutMode;
-    onAddStream: () => void;
     onChatPanelPositionChange: (position: ChatPanelPosition) => void;
     onLayoutModeChange: (mode: ViewLayoutMode) => void;
     onLiveVideoResolved: (channelId: string, videoId: string, title?: string) => void;
@@ -38,7 +36,6 @@ const WatchPage: React.FC<WatchPageProps> = ({
     chatPanelPosition,
     chatTransport,
     layoutMode,
-    onAddStream,
     onChatPanelPositionChange,
     onLayoutModeChange,
     onLiveVideoResolved,
@@ -138,8 +135,6 @@ const WatchPage: React.FC<WatchPageProps> = ({
 
                 <MergedYouTubeChatPanel enabled={chatMergeEnabled} streams={streams} transport={chatTransport} />
             </div>
-
-            <AddStreamButton onClick={onAddStream} />
         </main>
     );
 };
