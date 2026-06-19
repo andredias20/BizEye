@@ -1,11 +1,6 @@
-import { useState } from 'react';
 import './HomePage.css';
-import { searchYoutubeChannels } from '../services/youtubeResolver';
 
 import type { CreatorProfile, Platform, Stream } from '../types';
-import type { YoutubeChannelResult } from '../services/youtubeResolver';
-
-type ChannelResult = YoutubeChannelResult;
 
 const GITHUB_PROFILE_URL = 'https://github.com/andredias20';
 
@@ -37,38 +32,8 @@ const HomePage: React.FC<HomePageProps> = ({
     onOpenAddModal,
     onOpenWatch,
 }) => {
-    const [query, setQuery] = useState('');
-    const [results, setResults] = useState<ChannelResult[]>([]);
-    const [isSearching, setIsSearching] = useState(false);
-    const [searchError, setSearchError] = useState<string | null>(null);
-
     const handleFeaturedAdd = (creator: CreatorProfile) => {
         onAddStream(creator.id, creator.platform, creator.title, creator.chatIdentifier);
-    };
-
-    const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        const cleanQuery = query.trim();
-
-        if (!cleanQuery) return;
-
-        setSearchError(null);
-        setResults([]);
-
-        setIsSearching(true);
-
-        try {
-            const channels = await searchYoutubeChannels(cleanQuery, 6);
-
-            setResults(channels);
-            if (channels.length === 0) {
-                setSearchError('Nenhum canal encontrado para essa busca.');
-            }
-        } catch (error) {
-            setSearchError(error instanceof Error ? error.message : 'Erro inesperado na busca.');
-        } finally {
-            setIsSearching(false);
-        }
     };
 
     return (
@@ -81,7 +46,7 @@ const HomePage: React.FC<HomePageProps> = ({
                     </div>
                     <h1>BIZ EYE</h1>
                     <p className="hero-lead">
-                        Organize criadores, encontre canais e jogue as lives ativas para uma tela sem scroll.
+                        Organize criadores recomendados e jogue as lives ativas para uma tela sem scroll.
                     </p>
                     <div className="hero-actions">
                         <button className="primary-action" type="button" onClick={onOpenWatch}>
@@ -161,58 +126,6 @@ const HomePage: React.FC<HomePageProps> = ({
                         );
                     })}
                 </div>
-            </section>
-
-            <section className="home-section search-section">
-                <div className="section-heading">
-                    <span>Pesquisa YouTube</span>
-                    <h2>Encontrar canais</h2>
-                </div>
-
-                <form className="channel-search" onSubmit={handleSearch}>
-                    <input
-                        aria-label="Buscar canais"
-                        onChange={(event) => setQuery(event.target.value)}
-                        placeholder="Nome, @handle ou palavra-chave"
-                        type="search"
-                        value={query}
-                    />
-                    <button disabled={isSearching} type="submit">
-                        {isSearching ? 'Buscando' : 'Buscar'}
-                    </button>
-                </form>
-
-                {searchError && <p className="search-message">{searchError}</p>}
-
-                {results.length > 0 && (
-                    <div className="search-results">
-                        {results.map((result) => {
-                            const active = isStreamActive(activeStreams, { id: result.id, platform: 'youtube' });
-
-                            return (
-                                <article className="result-card" key={result.id}>
-                                    {result.thumbnail ? (
-                                        <img src={result.thumbnail} alt="" />
-                                    ) : (
-                                        <div className="result-avatar">{getInitials(result.title)}</div>
-                                    )}
-                                    <div>
-                                        <h3>{result.title}</h3>
-                                        <p>{result.description}</p>
-                                        <code>{result.id}</code>
-                                    </div>
-                                    <button
-                                        disabled={active}
-                                        onClick={() => onAddStream(result.id, 'youtube', result.title)}
-                                        type="button"
-                                    >
-                                        {active ? 'Na Watch' : 'Adicionar'}
-                                    </button>
-                                </article>
-                            );
-                        })}
-                    </div>
-                )}
             </section>
         </main>
     );

@@ -20,8 +20,8 @@ Vite prints the local URL in the terminal. If another worktree is already using 
 
 The frontend reads Vercel flags through the serverless endpoint `api/flags.ts`.
 
-- `bizeye-resolve=true`: YouTube channel search, channel resolution, and live lookup use `VITE_RESOLVER_BASE_URL`.
-- `bizeye-resolve=false`: those flows fall back to direct Google APIs through `VITE_YOUTUBE_API_KEY`.
+- `bizeye-resolve=true`: YouTube live lookup and observation use `VITE_RESOLVER_BASE_URL`.
+- `bizeye-resolve=false`: backend YouTube resolution is disabled; the frontend does not call Google APIs directly.
 - `bizeye-chat-merge=true`: Watch opens the merged chat panel for streams with chat identifiers.
 - `bizeye-chat-merge=false`: the merged chat panel stays hidden.
 - `bizeye-chat-transport=sse`: Watch uses `EventSource` against `/stream/chat/merge/stream`.
@@ -31,9 +31,9 @@ The frontend reads Vercel flags through the serverless endpoint `api/flags.ts`.
 
 ## Recommended Streams
 
-The Home recommendations and first-run Watch list are loaded from the backend route `GET /streams/recommended` when `VITE_RESOLVER_BASE_URL` is configured. The frontend keeps a local fallback with the original starter streams so the app remains usable if the backend is unavailable.
+The Home recommendations and first-run Watch list are loaded from the backend route `GET /recommended-lives` when `VITE_RESOLVER_BASE_URL` is configured. The frontend keeps a local fallback with the original starter streams so the app remains usable if the backend is unavailable.
 
-The backend reads active rows from `public.recommended_streams`, ordered by `display_order`, and returns short-lived HTTP cache headers for Vercel/CDN caching. Update that table to switch a recommendation between YouTube, Twitch, and Kick without redeploying the frontend.
+The backend returns only public rendering fields. Admin management is available at `#/admin/login` and `#/admin/lives`, backed by HTTP-only cookie sessions.
 
 ## YouTube Live Resolution
 

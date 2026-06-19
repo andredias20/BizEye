@@ -124,9 +124,15 @@ KICK_CHATROOM_OVERRIDES=
 KICK_USER_AGENT=
 KICK_ACCEPT_LANGUAGE=
 YOUTUBE_API_KEY=
+ADMIN_SESSION_SECRET=
+ADMIN_BOOTSTRAP_EMAIL=
+ADMIN_BOOTSTRAP_PASSWORD=
+ADMIN_COOKIE_SECURE=true
 ```
 
-Use `SUPABASE_SERVICE_ROLE_KEY` only in this backend. Never expose it to `bizeye-front`.
+Use `SUPABASE_SERVICE_ROLE_KEY`, `YOUTUBE_API_KEY`, and admin session secrets only in this backend. Never expose them to `bizeye-front`.
+
+The bootstrap admin is created lazily on first successful login when `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` are configured and no matching admin exists. Use a long random password and rotate it after creating the durable admin account you want to keep.
 
 ## Vercel Project
 
@@ -146,8 +152,17 @@ Use `SUPABASE_SERVICE_ROLE_KEY` only in this backend. Never expose it to `bizeye
 - `GET /ready`
 - `GET /internal/cron/live-check`
 - `GET /streams/recommended`
-- `GET /youtube/channels/search?q=ACF`
-- `POST /youtube/channels/resolve`
+- `GET /recommended-lives`
+- `POST /admin/auth/login`
+- `POST /admin/auth/logout`
+- `GET /admin/auth/me`
+- `GET /admin/recommended-lives`
+- `POST /admin/recommended-lives`
+- `PATCH /admin/recommended-lives/:id`
+- `DELETE /admin/recommended-lives/:id`
+- `POST /admin/recommended-lives/reorder`
+- `GET /youtube/channels/search?q=ACF` (admin cookie required)
+- `POST /youtube/channels/resolve` (admin cookie required)
 - `POST /youtube/channels/live-status`
 - `GET /youtube/channels/:channelId/live`
 - `POST /youtube/channels/:channelId/live`

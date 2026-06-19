@@ -227,6 +227,7 @@ export const getMockYouTubeResponse = <T>({ path, params }: YouTubeRequestOption
           actualStartTime: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
         },
         snippet: {
+          channelId: channel.channelId,
           liveBroadcastContent: 'live',
           title: channel.liveTitle,
         },

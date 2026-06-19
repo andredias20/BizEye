@@ -28,6 +28,7 @@ type YouTubeVideosResponse = {
   items?: Array<{
     id?: string;
     snippet?: {
+      channelId?: string;
       liveBroadcastContent?: 'live' | 'none' | 'upcoming';
       title?: string;
     };
@@ -141,6 +142,7 @@ const validateCachedVideo = async (store: LiveResolutionStore, channelId: string
 
   const video = data.items?.[0];
   const isLive =
+    video?.snippet?.channelId === channelId &&
     video?.snippet?.liveBroadcastContent === 'live' &&
     Boolean(video.liveStreamingDetails?.actualStartTime) &&
     !video.liveStreamingDetails?.actualEndTime;
@@ -307,10 +309,10 @@ export const recordObservedLiveVideo = async (channelId: string, videoId: string
 
   const store = createLiveResolutionStore();
 
-  return writeResolution(store, {
-    channelId,
-    source: 'youtube',
-    status: 'live',
-    videoId,
-  });
+  const validated = await validateCachedVideo(store, channelId, videoId);
+  if (validated.status !== 'live') {
+    throw new Error('Observed video is not an active live for this channel.');
+  }
+
+  return validated;
 };

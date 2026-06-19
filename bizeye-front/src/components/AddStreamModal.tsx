@@ -94,14 +94,14 @@ const AddStreamModal: React.FC<AddStreamModalProps> = ({ isOpen, onClose, onAdd 
 
                     <div className="input-group">
                         <label>
-                            {platform === 'youtube' ? 'Channel URL, ID ou Handle (@...)' :
+                            {platform === 'youtube' ? 'Channel URL (/channel/UC...), video URL ou ID' :
                                 platform === 'twitch' ? 'Twitch username, link ou username|chat' :
                                     'Kick username, link ou username|chatroomId'}
                         </label>
                         <input
                             type="text"
                             autoFocus
-                            placeholder={platform === 'youtube' ? '@canal ou UC...' : 'username'}
+                            placeholder={platform === 'youtube' ? 'UC... ou youtube.com/channel/UC...' : 'username'}
                             value={inputValue}
                             onChange={e => setInputValue(e.target.value)}
                         />

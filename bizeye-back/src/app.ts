@@ -4,8 +4,10 @@ import { logger } from 'hono/logger';
 import { requestId } from 'hono/request-id';
 import { secureHeaders } from 'hono/secure-headers';
 import { getOptionalServerEnv } from './config/env.js';
+import { adminRoutes } from './routes/admin.js';
 import { healthRoutes } from './routes/health.js';
 import { internalRoutes } from './routes/internal.js';
+import { recommendedLiveRoutes } from './routes/recommendedLives.js';
 import { recommendedStreamRoutes } from './routes/recommendedStreams.js';
 import { streamRoutes } from './routes/stream.js';
 import { youtubeRoutes } from './routes/youtube.js';
@@ -48,6 +50,11 @@ export const createApp = () => {
   app.use('*', (c, next) => (isWebSocketRoute(c.req.path) ? next() : loggerMiddleware(c, next)));
   app.use('*', (c, next) => (isWebSocketRoute(c.req.path) ? next() : corsMiddleware(c, next)));
 
+  app.onError((error, c) => {
+    console.error('Unhandled request error.', error);
+    return c.json({ error: 'internal_error' }, 500);
+  });
+
   app.get('/', (c) => {
     return c.json({
       service: 'bizeye-back',
@@ -56,7 +63,9 @@ export const createApp = () => {
   });
 
   app.route('/', healthRoutes);
+  app.route('/admin', adminRoutes);
   app.route('/internal', internalRoutes);
+  app.route('/recommended-lives', recommendedLiveRoutes);
   app.route('/stream', streamRoutes);
   app.route('/streams', recommendedStreamRoutes);
   app.route('/youtube', youtubeRoutes);

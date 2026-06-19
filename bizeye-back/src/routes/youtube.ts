@@ -11,8 +11,11 @@ import {
   type YouTubeChatSourceInput,
 } from '../services/youtubeLiveChat.js';
 import { fetchYouTubeJson } from '../services/youtube.js';
+import { requireAdmin } from '../middleware/requireAdmin.js';
 
 export const youtubeRoutes = new Hono();
+youtubeRoutes.use('/channels/search', requireAdmin);
+youtubeRoutes.use('/channels/resolve', requireAdmin);
 
 type YouTubeChannelSearchResponse = {
   items?: Array<{
@@ -79,10 +82,6 @@ const streamQuerySchema = z.object({
     .transform((value) => value.split(',').map((item) => item.trim()).filter(Boolean))
     .pipe(z.array(z.string().regex(/^[a-zA-Z0-9_-]{11}$/)).min(1).max(6)),
 });
-
-const getErrorMessage = (error: unknown) => {
-  return error instanceof Error ? error.message : 'Unexpected YouTube resolver error';
-};
 
 const toChatSources = (input: z.infer<typeof chatMergeSchema>): YouTubeChatSourceInput[] => {
   return input.sources ?? input.videoIds?.map((videoId) => ({ videoId })) ?? [];
@@ -191,7 +190,8 @@ youtubeRoutes.get('/channels/search', async (c) => {
 
     return c.json({ items });
   } catch (error) {
-    return c.json({ error: 'youtube_search_failed', message: getErrorMessage(error) }, 502);
+    console.error('YouTube channel search failed.', error);
+    return c.json({ error: 'youtube_search_failed' }, 502);
   }
 });
 
@@ -250,7 +250,8 @@ youtubeRoutes.post('/channels/resolve', async (c) => {
 
     return c.json({ error: 'channel_not_found' }, 404);
   } catch (error) {
-    return c.json({ error: 'youtube_resolve_failed', message: getErrorMessage(error) }, 502);
+    console.error('YouTube channel resolve failed.', error);
+    return c.json({ error: 'youtube_resolve_failed' }, 502);
   }
 });
 
@@ -265,7 +266,8 @@ youtubeRoutes.post('/channels/live-status', async (c) => {
     const items = await resolveLiveStatuses(parsed.data.channelIds);
     return c.json({ items });
   } catch (error) {
-    return c.json({ error: 'youtube_live_status_failed', message: getErrorMessage(error) }, 502);
+    console.error('YouTube live status failed.', error);
+    return c.json({ error: 'youtube_live_status_failed' }, 502);
   }
 });
 
@@ -284,7 +286,8 @@ youtubeRoutes.post('/chats/merge', async (c) => {
 
     return c.json(batch);
   } catch (error) {
-    return c.json({ error: 'youtube_chat_merge_failed', message: getErrorMessage(error) }, 502);
+    console.error('YouTube chat merge failed.', error);
+    return c.json({ error: 'youtube_chat_merge_failed' }, 502);
   }
 });
 
@@ -331,7 +334,6 @@ youtubeRoutes.get('/chats/merge/stream', (c) => {
           encoder.encode(
             encodeSse('chat-error', {
               error: 'youtube_chat_stream_failed',
-              message: getErrorMessage(error),
             }),
           ),
         );
