@@ -7,6 +7,7 @@ import AdminLivesPage from './pages/AdminLivesPage'
 import AdminLoginPage from './pages/AdminLoginPage'
 import FireTvPage from './pages/FireTvPage'
 import HomePage from './pages/HomePage'
+import LivesPage from './pages/LivesPage'
 import WatchPage from './pages/WatchPage'
 import { isFireTvLikeDevice } from './platform/fireTv'
 import { resolveKickInput } from './services/kickResolver'
@@ -34,7 +35,7 @@ import {
 
 import type { ChatPanelPosition, ChatTransport, CreatorProfile, Platform, Stream, ViewLayoutMode } from './types'
 
-type PublicAppPage = 'firetv' | 'home' | 'watch';
+type PublicAppPage = 'firetv' | 'home' | 'lives' | 'watch';
 type AppPage = PublicAppPage | 'adminLives' | 'adminLogin';
 
 type InitialStreamsState = {
@@ -42,7 +43,7 @@ type InitialStreamsState = {
   streams: Stream[];
 };
 
-const getPageFromHash = (): AppPage => {
+const getPageFromLocation = (): AppPage => {
   const hashRoute = window.location.hash.replace(/^#\/?/, '').replace(/\/$/, '');
 
   if (hashRoute === 'admin/login') {
@@ -53,12 +54,8 @@ const getPageFromHash = (): AppPage => {
     return 'adminLives';
   }
 
-  if (hashRoute === 'firetv' || hashRoute === 'watch') {
+  if (hashRoute === 'firetv' || hashRoute === 'lives' || hashRoute === 'watch') {
     return hashRoute;
-  }
-
-  if (window.location.hash) {
-    return 'home';
   }
 
   const pathRoute = window.location.pathname.replace(/^\/+/, '').replace(/\/$/, '');
@@ -71,11 +68,25 @@ const getPageFromHash = (): AppPage => {
     return 'adminLives';
   }
 
-  if (pathRoute === 'firetv' || pathRoute === 'watch') {
+  if (pathRoute === 'firetv' || pathRoute === 'lives' || pathRoute === 'watch') {
     return pathRoute;
   }
 
   return 'home';
+};
+
+const getPathForPage = (page: PublicAppPage) => {
+  if (page === 'home') return '/';
+
+  return `/${page}`;
+};
+
+const pushPublicRoute = (page: PublicAppPage, mode: 'push' | 'replace' = 'push') => {
+  const nextPath = getPathForPage(page);
+  const currentPath = `${window.location.pathname}${window.location.search}`;
+  if (currentPath === nextPath && !window.location.hash) return;
+
+  window.history[mode === 'push' ? 'pushState' : 'replaceState']({}, '', nextPath);
 };
 
 const getInitialStreamsState = (): InitialStreamsState => {
@@ -103,7 +114,7 @@ function App() {
   const [featuredCreatorsError, setFeaturedCreatorsError] = useState<string | null>(null);
   const [isFeaturedCreatorsLoading, setIsFeaturedCreatorsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState<AppPage>(getPageFromHash);
+  const [currentPage, setCurrentPage] = useState<AppPage>(getPageFromLocation);
   const [bizeyeResolveFlagValue, setBizeyeResolveFlagValue] = useState(getInitialBizeyeResolveFlagValue);
   const [bizeyeChatMergeFlagValue, setBizeyeChatMergeFlagValue] = useState(getInitialBizeyeChatMergeFlagValue);
   const [bizeyeChatTransportFlagValue, setBizeyeChatTransportFlagValue] = useState<ChatTransport>(
@@ -116,17 +127,22 @@ function App() {
   const attemptedKickChatroomResolutions = useRef(new Set<string>());
 
   useEffect(() => {
-    const handleHashChange = () => setCurrentPage(getPageFromHash());
-    window.addEventListener('hashchange', handleHashChange);
+    const handleRouteChange = () => setCurrentPage(getPageFromLocation());
+    window.addEventListener('hashchange', handleRouteChange);
+    window.addEventListener('popstate', handleRouteChange);
 
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    return () => {
+      window.removeEventListener('hashchange', handleRouteChange);
+      window.removeEventListener('popstate', handleRouteChange);
+    };
   }, []);
 
   useEffect(() => {
     if (didAutoRedirectFireTv.current || currentPage === 'firetv' || !isFireTvLikeDevice()) return;
 
     didAutoRedirectFireTv.current = true;
-    window.location.hash = '/firetv';
+    pushPublicRoute('firetv', 'replace');
+    window.dispatchEvent(new PopStateEvent('popstate'));
   }, [currentPage]);
 
   useEffect(() => {
@@ -288,7 +304,7 @@ function App() {
   }, [activeStreams, updateActiveStreams]);
 
   const navigateTo = (page: PublicAppPage) => {
-    window.location.hash = page === 'watch' ? '/watch' : page === 'firetv' ? '/firetv' : '/';
+    pushPublicRoute(page);
     setCurrentPage(page);
   };
 
@@ -368,13 +384,13 @@ function App() {
       ) : currentPage === 'firetv' ? (
         <FireTvPage
           onLiveVideoResolved={updateYoutubeLiveVideo}
+          onOpenLives={() => navigateTo('lives')}
           onOpenHome={() => navigateTo('home')}
-          onOpenWatch={() => navigateTo('watch')}
           onRemoveStream={removeStream}
           streams={activeStreams}
         />
-      ) : currentPage === 'watch' ? (
-        <WatchPage
+      ) : currentPage === 'lives' ? (
+        <LivesPage
           chatMergeEnabled={bizeyeChatMergeFlagValue}
           chatPanelPosition={chatPanelPosition}
           chatTransport={bizeyeChatTransportFlagValue}
@@ -385,6 +401,8 @@ function App() {
           onRemoveStream={removeStream}
           streams={activeStreams}
         />
+      ) : currentPage === 'watch' ? (
+        <WatchPage />
       ) : (
         <HomePage
           activeStreams={activeStreams}
@@ -393,6 +411,7 @@ function App() {
           isFeaturedCreatorsLoading={isFeaturedCreatorsLoading}
           onAddStream={addStream}
           onOpenAddModal={() => setIsModalOpen(true)}
+          onOpenLives={() => navigateTo('lives')}
           onOpenWatch={() => navigateTo('watch')}
         />
       )}

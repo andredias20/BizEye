@@ -5,6 +5,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/lives",
+      "destination": "/index.html"
+    },
+    {
       "source": "/watch",
       "destination": "/index.html"
     }

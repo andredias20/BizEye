@@ -28,3 +28,15 @@ export interface CreatorProfile extends Stream {
     thumbnail?: string;
     description: string;
 }
+
+export interface YouTubeQueueItem {
+    addedAt: string;
+    channelTitle?: string;
+    duration?: string;
+    durationSeconds?: number;
+    id: string;
+    startSeconds?: number;
+    thumbnail?: string;
+    title: string;
+    url: string;
+}

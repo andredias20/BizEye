@@ -226,9 +226,21 @@ export const getMockYouTubeResponse = <T>({ path, params }: YouTubeRequestOption
           activeLiveChatId: `chat-${channel.videoId}`,
           actualStartTime: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
         },
+        contentDetails: {
+          duration: 'PT2H14M36S',
+        },
         snippet: {
           channelId: channel.channelId,
+          channelTitle: channel.title,
           liveBroadcastContent: 'live',
+          thumbnails: {
+            high: {
+              url: channel.thumbnail,
+            },
+            medium: {
+              url: channel.thumbnail,
+            },
+          },
           title: channel.liveTitle,
         },
         status: {

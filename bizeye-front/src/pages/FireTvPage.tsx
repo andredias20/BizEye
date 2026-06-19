@@ -5,16 +5,16 @@ import type { Stream } from '../types';
 
 interface FireTvPageProps {
     onLiveVideoResolved: (channelId: string, videoId: string, title?: string) => void;
+    onOpenLives: () => void;
     onOpenHome: () => void;
-    onOpenWatch: () => void;
     onRemoveStream: (id: string, platform: Stream['platform']) => void;
     streams: Stream[];
 }
 
 const FireTvPage: React.FC<FireTvPageProps> = ({
     onLiveVideoResolved,
+    onOpenLives,
     onOpenHome,
-    onOpenWatch,
     onRemoveStream,
     streams,
 }) => {
@@ -27,7 +27,7 @@ const FireTvPage: React.FC<FireTvPageProps> = ({
                 </div>
 
                 <nav aria-label="Fire TV">
-                    <button onClick={onOpenWatch} type="button">Watch</button>
+                    <button onClick={onOpenLives} type="button">Lives</button>
                     <button onClick={onOpenHome} type="button">Home</button>
                 </nav>
             </div>

@@ -11,6 +11,7 @@ interface HomePageProps {
     isFeaturedCreatorsLoading: boolean;
     onAddStream: (id: string, platform: Platform, title?: string, chatIdentifier?: string) => void;
     onOpenAddModal: () => void;
+    onOpenLives: () => void;
     onOpenWatch: () => void;
 }
 
@@ -53,6 +54,7 @@ const HomePage: React.FC<HomePageProps> = ({
     isFeaturedCreatorsLoading,
     onAddStream,
     onOpenAddModal,
+    onOpenLives,
     onOpenWatch,
 }) => {
     const handleFeaturedAdd = (creator: CreatorProfile) => {
@@ -69,10 +71,13 @@ const HomePage: React.FC<HomePageProps> = ({
                     </div>
                     <h1>BIZ EYE</h1>
                     <p className="hero-lead">
-                        Organize criadores recomendados e jogue as lives ativas para uma tela sem scroll.
+                        Organize lives ativas e mantenha uma fila separada para videos do YouTube.
                     </p>
                     <div className="hero-actions">
-                        <button className="primary-action" type="button" onClick={onOpenWatch}>
+                        <button className="primary-action" type="button" onClick={onOpenLives}>
+                            Abrir Lives
+                        </button>
+                        <button className="secondary-action" type="button" onClick={onOpenWatch}>
                             Abrir Watch
                         </button>
                         <button className="secondary-action" type="button" onClick={onOpenAddModal}>
@@ -89,7 +94,7 @@ const HomePage: React.FC<HomePageProps> = ({
                         </div>
                         <div>
                             <strong>5</strong>
-                            <span>modos Watch</span>
+                            <span>modos Lives</span>
                         </div>
                         <div>
                             <strong>3</strong>
@@ -176,7 +181,7 @@ const HomePage: React.FC<HomePageProps> = ({
                                     onClick={() => handleFeaturedAdd(creator)}
                                     type="button"
                                 >
-                                    {active ? 'Na Watch' : 'Adicionar'}
+                                    {active ? 'Nas Lives' : 'Adicionar'}
                                 </button>
                             </article>
                         );
